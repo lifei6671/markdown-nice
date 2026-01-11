@@ -77,7 +77,6 @@ export default `/*初始化格式*/
 /* 三级标题 */
 #nice h3:before {
   content: "";
-  background-image:url(https://my-wechat.mdnice.com/mdnice/mountain_1_20191028221337.png);
   background-size:15px 15px;
   display: inline-block;
   width: 15px;
