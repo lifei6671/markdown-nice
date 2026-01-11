@@ -1,7 +1,7 @@
-import { defineConfig } from "vite";
+import {defineConfig} from "vite";
 import react from "@vitejs/plugin-react";
 
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({mode}) => ({
   base: "./",
   plugins: [
     react({
@@ -9,8 +9,8 @@ export default defineConfig(({ mode }) => ({
       include: /\.[jt]sx?$/,
       babel: {
         plugins: [
-          ["@babel/plugin-proposal-decorators", { legacy: true }],
-          ["@babel/plugin-proposal-class-properties", { loose: true }],
+          ["@babel/plugin-proposal-decorators", {legacy: true}],
+          ["@babel/plugin-proposal-class-properties", {loose: true}],
         ],
       },
     }),
@@ -19,8 +19,12 @@ export default defineConfig(({ mode }) => ({
     entries: ["index.html"],
     exclude: ["react/jsx-runtime", "react/jsx-dev-runtime"],
   },
+  resolve: {
+    alias: [{find: /^antd$/, replacement: "antd/lib"}],
+  },
   build: {
     outDir: "docs",
+    sourcemap: true,
   },
   server: {
     host: true,
