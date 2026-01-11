@@ -7,9 +7,8 @@ workers_dev = true
 account_id = "f6a80eb748def94c3e800c9a6456e16b"
 
 [[routes]]
-pattern = "mdnice.disign.me/*"
+pattern = "mdnice.disign.me"
 zone_name = "disign.me" 
-custom_domain = true
 
 [assets]
 directory = "./docs"
