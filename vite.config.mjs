@@ -28,6 +28,7 @@ export default defineConfig(({mode}) => ({
   server: {
     host: true,
     port: 3000,
+    strictPort: true,
   },
   define: {
     "process.env.NODE_ENV": JSON.stringify(mode),

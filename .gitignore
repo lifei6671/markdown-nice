@@ -29,3 +29,5 @@ lib
 .wrangler/
 .vscode/
 .idea/
+.DS_Store
+src-tauri/target/
