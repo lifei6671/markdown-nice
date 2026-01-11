@@ -28,7 +28,7 @@ export const axiosJSON = axios.create({
 
 export const axiosMdnice = axios.create({
   // baseURL: process.env.NODE_ENV === "development" ? "http://localhost:8081" : "https://math.mdnice.com",
-  baseURL: process.env.NODE_ENV === "development" ? "https://math.mdnice.com" : "https://math.mdnice.com",
+  baseURL: process.env.NODE_ENV === "development" ? "http://localhost:3000" : "https://mdnice.disign.me",
 });
 
 export const queryParse = (search = window.location.search) => {
@@ -101,7 +101,7 @@ export const markdownParser = new MarkdownIt({
     if (lang && highlightjs.getLanguage(lang)) {
       try {
         const formatted = highlightjs
-          .highlight(lang, str, true)
+          .highlight(str, {language: lang, ignoreIllegals: true})
           .value.replace(/\n/g, "<br/>") // 换行用br表示
           .replace(/\s/g, "&nbsp;") // 用nbsp替换空格
           .replace(/span&nbsp;/g, "span "); // span标签修复

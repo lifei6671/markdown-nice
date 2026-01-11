@@ -38,15 +38,15 @@
     "classnames": "^2.3.2",
     "ali-oss": "^6.1.1",
     "antd": "^3.15.1",
-    "axios": "^0.21.1",
+    "axios": "1.12.0",
     "codemirror": "^5.65.16",
     "diff-match-patch": "^1.0.4",
     "enquire.js": "^2.1.6",
-    "highlight.js": "^9.15.6",
+    "highlight.js": "^11.9.0",
     "juice": "^5.2.0",
     "lodash.debounce": "^4.0.8",
     "lodash.throttle": "^4.1.1",
-    "markdown-it": "^8.4.2",
+    "markdown-it": "12.3.2",
     "markdown-it-deflist": "^2.0.3",
     "markdown-it-footnote": "^3.0.1",
     "markdown-it-implicit-figures": "^0.9.0",
@@ -69,7 +69,7 @@
     "@babel/cli": "^7.24.1",
     "@babel/core": "^7.24.1",
     "@babel/eslint-parser": "^7.24.1",
-    "@babel/plugin-proposal-class-properties": "^7.18.6",
+    "@babel/plugin-transform-class-properties": "^7.24.1",
     "@babel/plugin-proposal-decorators": "^7.24.1",
     "@babel/preset-react": "^7.24.1",
     "@storybook/react": "^4.1.11",
@@ -191,7 +191,7 @@
         }
       ],
       [
-        "@babel/plugin-proposal-class-properties",
+        "@babel/plugin-transform-class-properties",
         {
           "loose": true
         }
