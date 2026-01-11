@@ -23,8 +23,7 @@ export default defineConfig(({mode}) => ({
     alias: [{find: /^antd$/, replacement: "antd/lib"}],
   },
   build: {
-    outDir: "docs",
-    sourcemap: true,
+    outDir: "docs"
   },
   server: {
     host: true,

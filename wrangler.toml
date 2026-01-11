@@ -6,9 +6,10 @@ workers_dev = true
 # TODO: set your Cloudflare account id
 account_id = "f6a80eb748def94c3e800c9a6456e16b"
 
-routes = [
-  { pattern = "mdnice.disign.me/*", zone_name = "disign.me" }
-]
+[[routes]]
+pattern = "mdnice.disign.me/*"
+zone_name = "disign.me" 
+custom_domain = true
 
 [assets]
 directory = "./docs"
