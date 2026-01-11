@@ -32,7 +32,7 @@ function debounce(func, wait, immediate) {
 function build() {
   console.log();
   console.log(chalk.green("-> building"));
-  shelljs.exec("cross-env NODE_ENV=production && npx babel src --out-dir lib --copy-files");
+  shelljs.exec("cross-env NODE_ENV=production && npx babel src --out-dir lib --copy-files --extensions \".js,.jsx\"");
   console.log(chalk.green("-> build finished"));
 }
 

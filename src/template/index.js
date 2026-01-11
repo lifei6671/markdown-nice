@@ -21,7 +21,7 @@ import fullStackBlue from "./markdown/fullStackBlue";
 import nightPurple from "./markdown/nightPurple";
 import extremeBlack from "./markdown/extremeBlack";
 
-import content from "./content.md";
+import content from "./content.md?raw";
 
 import atomOneDark from "./code/atomOneDark";
 import atomOneLight from "./code/atomOneLight";

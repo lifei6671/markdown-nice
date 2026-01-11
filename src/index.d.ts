@@ -28,6 +28,7 @@ export interface MarkdownNiceProps {
     url: string;
     name: string;
     isSmmsOpen: boolean;
+    isR2Open: boolean;
     isQiniuyunOpen: boolean;
     isAliyunOpen: boolean;
   };

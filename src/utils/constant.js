@@ -5,7 +5,9 @@ export const CLIENT_SECRET =
     : "dfd9fdc1da6a6b10e473280bf0a379513f1d154d";
 
 export const PROXY = "https://cors-anywhere.herokuapp.com/https://github.com/login/oauth/access_token";
-export const SM_MS_PROXY = "https://cors-anywhere.herokuapp.com/https://sm.ms/api/upload";
+export const SM_MS_PROXY = "https://cors-anywhere.herokuapp.com/https://sm.ms/api/v2/upload";
+export const SM_MS_TOKEN = "SM_MS_TOKEN";
+export const R2_IMAGE_HOSTING = "r2_image_hosting";
 export const ACCESS_TOKEN = "ACCESS_TOKEN";
 export const MJX_DATA_FORMULA = "data-formula";
 export const MJX_DATA_FORMULA_TYPE = "data-formula-type";
@@ -32,6 +34,7 @@ export const IMAGE_HOSTING_NAMES = {
   smms: "SM.MS",
   aliyun: "阿里云",
   qiniuyun: "七牛云",
+  r2: "CF R2",
 };
 
 export const RIGHT_SYMBOL = "✔️";

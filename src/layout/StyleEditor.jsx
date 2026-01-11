@@ -7,6 +7,7 @@ import "codemirror/addon/edit/closebrackets";
 import "codemirror/addon/hint/show-hint";
 import "codemirror/addon/hint/show-hint.css";
 import "codemirror/addon/hint/css-hint";
+import "codemirror/mode/css/css";
 import "antd/dist/antd.css";
 import {observer, inject} from "mobx-react";
 
@@ -77,7 +78,7 @@ class StyleEditor extends Component {
         options={{
           theme: "style-mirror",
           keyMap: "sublime",
-          mode: "css",
+          mode: "text/css",
           lineWrapping: true,
           lineNumbers: false,
         }}

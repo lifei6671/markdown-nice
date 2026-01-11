@@ -44,6 +44,7 @@ class AboutDialog extends Component {
             target="_blank"
             href="https://github.com/mdnice/markdown-nice"
             style={style.noBorder}
+            aria-label="Star note on GitHub"
           >
             <img alt="" style={style.img} src="https://badgen.net/github/stars/mdnice/markdown-nice" />
           </a>

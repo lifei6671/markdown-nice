@@ -2,6 +2,7 @@ import React, {Component} from "react";
 import CodeMirror from "@uiw/react-codemirror";
 import "codemirror/addon/search/searchcursor";
 import "codemirror/keymap/sublime";
+import "codemirror/mode/markdown/markdown";
 import "antd/dist/antd.css";
 import {observer, inject} from "mobx-react";
 import classnames from "classnames";
@@ -75,9 +76,13 @@ class App extends Component {
           },
         },
       };
-      // eslint-disable-next-line
-      require("mathjax/es5/tex-svg-full");
-      pluginCenter.mathjax = true;
+      import("mathjax/es5/tex-svg-full")
+        .then(() => {
+          pluginCenter.mathjax = true;
+        })
+        .catch((error) => {
+          console.log(error);
+        });
     } catch (e) {
       console.log(e);
     }
@@ -110,6 +115,9 @@ class App extends Component {
     }
     if (isSmmsOpen) {
       this.props.imageHosting.addImageHosting(IMAGE_HOSTING_NAMES.smms);
+    }
+    if (this.props.useImageHosting.isR2Open) {
+      this.props.imageHosting.addImageHosting(IMAGE_HOSTING_NAMES.r2);
     }
     if (isAliyunOpen) {
       this.props.imageHosting.addImageHosting(IMAGE_HOSTING_NAMES.aliyun);
@@ -280,7 +288,7 @@ class App extends Component {
                   options={{
                     theme: "md-mirror",
                     keyMap: "sublime",
-                    mode: "markdown",
+                    mode: "text/x-markdown",
                     lineWrapping: true,
                     lineNumbers: false,
                     extraKeys: {

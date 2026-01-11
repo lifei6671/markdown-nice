@@ -1,11 +1,13 @@
 import React, {Component} from "react";
 import {observer, inject} from "mobx-react";
-import {Modal, Upload, Tabs, Select} from "antd";
+import {Modal, Upload, Tabs, Select, message} from "antd";
 
 import SvgIcon from "../../icon";
 
 import AliOSS from "../ImageHosting/AliOSS";
 import QiniuOSS from "../ImageHosting/QiniuOSS";
+import Smms from "../ImageHosting/Smms";
+import R2 from "../ImageHosting/R2";
 
 import {uploadAdaptor} from "../../utils/imageHosting";
 import {SM_MS_PROXY, IMAGE_HOSTING_TYPE, IMAGE_HOSTING_NAMES} from "../../utils/constant";
@@ -48,10 +50,7 @@ class ImageDialog extends Component {
     const content = markdownEditor.getValue();
     this.props.content.setContent(content);
 
-    this.props.dialog.setImageOpen(false);
-    cursor.ch += 2;
-    markdownEditor.setCursor(cursor);
-    markdownEditor.focus();
+    message.success("保存成功");
   };
 
   handleCancel = () => {
@@ -80,6 +79,10 @@ class ImageDialog extends Component {
     else if (this.props.imageHosting.type === "SM.MS") {
       uploadAdaptor({formData, file, action, onProgress, onSuccess, onError, headers, withCredentials});
       // this.smmsUpload(formData, file, action, onProgress, onSuccess, onError, headers, withCredentials);
+    }
+    // 使用 Cloudflare R2
+    else if (this.props.imageHosting.type === "CF R2") {
+      uploadAdaptor({file, onSuccess, onError, images});
     }
     // 使用用户提供的图床或是默认mdnice图床
     else {
@@ -118,6 +121,7 @@ class ImageDialog extends Component {
         title="本地上传"
         okText="确认"
         cancelText="取消"
+        width={650}
         visible={this.props.dialog.isImageOpen}
         onOk={this.handleOk}
         onCancel={this.handleCancel}
@@ -143,6 +147,16 @@ class ImageDialog extends Component {
               {useImageHosting.isQiniuyunOpen ? (
                 <TabPane tab={IMAGE_HOSTING_NAMES.qiniuyun} key="3">
                   <QiniuOSS />
+                </TabPane>
+              ) : null}
+              {useImageHosting.isSmmsOpen ? (
+                <TabPane tab={IMAGE_HOSTING_NAMES.smms} key="4">
+                  <Smms />
+                </TabPane>
+              ) : null}
+              {useImageHosting.isR2Open ? (
+                <TabPane tab={IMAGE_HOSTING_NAMES.r2} key="5">
+                  <R2 />
                 </TabPane>
               ) : null}
             </Tabs>

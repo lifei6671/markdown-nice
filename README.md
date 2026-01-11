@@ -11,6 +11,8 @@
 - 调整主题菜单项顺序
 - 调整默认代码主题为 ***atom-one-dark***，并默认开启 ***Mac 风格*** 配置
 - 新增主题 「极简黑」，「凝夜紫」
+- 支持 Cloudflare R2 作为图床
+- 升级 nodejs 支持的版本
 
 > 有疑问请参考 [如何有效的解决 mdnice 相关问题？](https://github.com/mdnice/markdown-nice/issues/163)
 
@@ -25,12 +27,12 @@
 - [凝夜紫](https://mp.weixin.qq.com/s/0IDhUGxZtMDFGD-Z9Ij_Cg) `@童欧巴` : 适配微信以及Safari的深色模式。“凝夜紫”，寓意在深色模式中也可以发光。
 - [萌绿](https://mp.weixin.qq.com/s/iK3r9I28NMWApEydH046-w) `@koala`
 - [极简黑](https://mp.weixin.qq.com/s/6UQmAhyXQY6AaYcyd1npIg) `@小鱼` : 公众号自律神仙ScarSu同款~
-- [橙心](https://mp.weixin.qq.com/s?__biz=MzIwNTA4NzI1Mw==&mid=2247485062&amp;idx=1&amp;sn=0eaa314bb165c71a8f57c8baf4226f57&source=41#wechat_redirect) `@zhning12`
+- [橙心](https://mp.weixin.qq.com/s?__biz=MzIwNTA4NzI1Mw==&mid=2247485062&idx=1&sn=0eaa314bb165c71a8f57c8baf4226f57&source=41#wechat_redirect) `@zhning12`
 - 墨黑 `@Mayandev`
 - 姹紫 `@djmaxwow`
 - [绿意](https://mp.weixin.qq.com/s/gpancJ62Dkd4ccXzFg2g5Q) `@夜尽天明`
 - 嫩青 `@画手`
-- [WeChat-Format](https://mp.weixin.qq.com/s?__biz=MzIwNTA4NzI1Mw==&mid=2247485061&amp;idx=1&amp;sn=36047ec080d1daaf63d733d18e546ba7&source=41#wechat_redirect) `@画手`
+- [WeChat-Format](https://mp.weixin.qq.com/s?__biz=MzIwNTA4NzI1Mw==&mid=2247485061&idx=1&sn=36047ec080d1daaf63d733d18e546ba7&source=41#wechat_redirect) `@画手`
 - [兰青](https://mp.weixin.qq.com/s/iL8xlH0I3yOEOrhcBqc0kg) `@Krahets`
 - [前端之巅同款](https://mp.weixin.qq.com/s/sSJwPflpzan1R_7kmBRwmQ) `@HeyRain`
 - 极客黑 `@hyper-xx`

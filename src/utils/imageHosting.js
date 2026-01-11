@@ -9,12 +9,15 @@ import imageHosting from "../store/imageHosting";
 
 import {
   SM_MS_PROXY,
+  SM_MS_TOKEN,
   ALIOSS_IMAGE_HOSTING,
   QINIUOSS_IMAGE_HOSTING,
+  R2_IMAGE_HOSTING,
   IMAGE_HOSTING_TYPE,
   IS_CONTAIN_IMG_NAME,
   IMAGE_HOSTING_NAMES,
 } from "./constant";
+import {S3Client, PutObjectCommand} from "@aws-sdk/client-s3";
 import {toBlob, getOSSName, axiosMdnice} from "./helper";
 
 function showUploadNoti() {
@@ -206,13 +209,22 @@ export const smmsUpload = ({
   images = [],
   content = null, // store content
 }) => {
+  const requestHeaders = {
+    ...headers,
+  };
+  if (!requestHeaders.Authorization) {
+    const token = window.localStorage.getItem(SM_MS_TOKEN);
+    if (token) {
+      requestHeaders.Authorization = token;
+    }
+  }
   showUploadNoti();
   // SM.MS图床必须这里命名为smfile
   formData.append("smfile", file);
   axios
     .post(action, formData, {
       withCredentials,
-      headers,
+      headers: requestHeaders,
       onUploadProgress: ({total, loaded}) => {
         onProgress(
           {
@@ -223,12 +235,32 @@ export const smmsUpload = ({
       },
     })
     .then(({data: response}) => {
-      if (response.code === "exception") {
-        throw response.message;
+      const isSuccess =
+        response && (response.success === true || response.code === "success" || response.code === "image_repeated");
+      if (!isSuccess) {
+        const rawMessage = response && (response.message || response.msg || response.code);
+        const messageText =
+          rawMessage && String(rawMessage).includes("logged in")
+            ? "SM.MS 需要登录 Token，请在本地存储中设置 SM_MS_TOKEN"
+            : rawMessage || "图片上传失败";
+        throw new Error(messageText);
       }
+      const responseData = response?.data?.data ?? response?.data ?? null;
+
+      const url = (responseData && responseData.url) || (response && response.images) || (response && response.url);
+      if (!url) {
+        throw new Error("图片上传失败");
+      }
+      const names = file.name ? file.name.split(".") : [];
+      if (names.length > 1) {
+        names.pop();
+      }
+      const filename =
+        (responseData && (responseData.filename || responseData.storename)) ||
+        (names.length ? names.join(".") : "image");
       const image = {
-        filename: response.data.filename,
-        url: response.data.url,
+        filename,
+        url,
       };
       if (content) {
         writeToEditor({content, image});
@@ -240,7 +272,7 @@ export const smmsUpload = ({
       }, 500);
     })
     .catch((error) => {
-      hideUploadNoti();
+      message.destroy();
       uploadError(error.toString());
       onError(error, error.toString());
     });
@@ -320,6 +352,82 @@ export const aliOSSUpload = ({
   };
 };
 
+// Cloudflare R2 上传
+export const r2Upload = async ({
+  file = {},
+  onSuccess = () => {},
+  onError = () => {},
+  images = [],
+  content = null, // store content
+}) => {
+  showUploadNoti();
+  try {
+    const config = JSON.parse(window.localStorage.getItem(R2_IMAGE_HOSTING));
+    if (!config.accountId || !config.accessKeyId || !config.secretAccessKey || !config.bucket) {
+      throw new Error("请先配置 Cloudflare R2 图床");
+    }
+
+    const uploadFile = file && file.originFileObj ? file.originFileObj : file;
+    if (!uploadFile || typeof uploadFile.arrayBuffer !== "function") {
+      throw new Error("未获取到有效的上传文件");
+    }
+
+    const endpoint = `https://${config.accountId}.r2.cloudflarestorage.com`;
+    const client = new S3Client({
+      region: "auto",
+      endpoint,
+      forcePathStyle: true,
+      credentials: {
+        accessKeyId: config.accessKeyId,
+        secretAccessKey: config.secretAccessKey,
+      },
+    });
+
+    const key = getOSSName(uploadFile.name || file.name || "image", config.namespace || "");
+    const fileBuffer = await uploadFile.arrayBuffer();
+    const body = new Uint8Array(fileBuffer);
+    await client.send(
+      new PutObjectCommand({
+        Bucket: config.bucket,
+        Key: key,
+        Body: body,
+        ContentType: uploadFile.type || file.type || "application/octet-stream",
+      }),
+    );
+
+    let baseUrl = config.publicBaseUrl || "";
+    if (baseUrl && baseUrl[baseUrl.length - 1] !== "/") {
+      baseUrl += "/";
+    }
+    if (!baseUrl) {
+      baseUrl = `${endpoint}/${config.bucket}/`;
+    }
+
+    const names = uploadFile.name ? uploadFile.name.split(".") : [];
+    if (names.length > 1) {
+      names.pop();
+    }
+    const filename = names.length ? names.join(".") : "image";
+    const image = {
+      filename,
+      url: encodeURI(`${baseUrl}${key}`),
+    };
+
+    if (content) {
+      writeToEditor({content, image});
+    }
+    images.push(image);
+    onSuccess({key}, file);
+    setTimeout(() => {
+      hideUploadNoti();
+    }, 500);
+  } catch (error) {
+    message.destroy();
+    uploadError(error.toString());
+    onError(error, error.toString());
+  }
+};
+
 // 自动检测上传配置，进行上传
 export const uploadAdaptor = (...args) => {
   const type = localStorage.getItem(IMAGE_HOSTING_TYPE); // SM.MS | 阿里云 | 七牛云 | 用户自定义图床
@@ -328,6 +436,13 @@ export const uploadAdaptor = (...args) => {
     return customImageUpload(...args);
   } else if (type === IMAGE_HOSTING_NAMES.smms) {
     return smmsUpload(...args);
+  } else if (type === IMAGE_HOSTING_NAMES.r2) {
+    const config = JSON.parse(window.localStorage.getItem(R2_IMAGE_HOSTING));
+    if (!config.accountId || !config.accessKeyId || !config.secretAccessKey || !config.bucket) {
+      message.error("请先配置 Cloudflare R2 图床");
+      return false;
+    }
+    return r2Upload(...args);
   } else if (type === IMAGE_HOSTING_NAMES.qiniuyun) {
     const config = JSON.parse(window.localStorage.getItem(QINIUOSS_IMAGE_HOSTING));
     if (

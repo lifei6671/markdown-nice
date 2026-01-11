@@ -2,6 +2,7 @@ import * as React from "react";
 import {Menu, Button, Radio} from "antd";
 import CodeMirror from "@uiw/react-codemirror";
 import {diff_match_patch as DiffMatchPath} from "diff-match-patch";
+import "codemirror/mode/markdown/markdown";
 
 import "./localHistory.css";
 
@@ -70,7 +71,7 @@ class LocalHistory extends React.Component {
                 options={{
                   readOnly: true,
                   theme: "md-mirror",
-                  mode: "markdown",
+                  mode: "text/x-markdown",
                   lineWrapping: true,
                   lineNumbers: false,
                 }}
