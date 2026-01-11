@@ -18,6 +18,17 @@
   width: 16px;
 }
 
+.nice-overlay .ant-dropdown-menu-submenu-title {
+  display: flex;
+  align-items: center;
+}
+
+.nice-overlay .ant-dropdown-menu-submenu-title .nice-menu-submenu-title {
+  flex: 1;
+  min-width: 0;
+}
+
+
 .nice-menu-link {
   color: #333;
   font-size: 14px;

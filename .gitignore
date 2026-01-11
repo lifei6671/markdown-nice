@@ -27,3 +27,5 @@ dist
 package-lock.json
 lib
 .wrangler/
+.vscode/
+.idea/
