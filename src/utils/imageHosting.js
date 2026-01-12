@@ -21,6 +21,8 @@ import {S3Client, PutObjectCommand} from "@aws-sdk/client-s3";
 import {toBlob, getOSSName, axiosMdnice} from "./helper";
 import {invoke} from "@tauri-apps/api/tauri";
 import createQiniuUploadToken from "./qiuniu";
+import compressThenWebp from "./imageCompress";
+import renderObjectName from "./imageFilename";
 
 function isTauriEnv() {
   if (typeof window === "undefined") {
@@ -60,6 +62,33 @@ function withTimeout(promise, timeoutMs, errorMessage) {
     }
   });
 }
+
+function clampNumber(value, min, max, fallback) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+  return Math.max(min, Math.min(max, parsed));
+}
+
+function toWebpFile(blob, originalName) {
+  const safeName = (originalName && String(originalName).trim()) || "image";
+  const parts = safeName.split(".");
+  if (parts.length > 1) {
+    parts.pop();
+  }
+  const baseName = parts.length ? parts.join(".") : safeName;
+  const fileName = `${baseName}.webp`;
+  try {
+    return new File([blob], fileName, {type: blob.type || "image/webp"});
+  } catch (error) {
+    const fileLike = blob;
+    fileLike.name = fileName;
+    return fileLike;
+  }
+}
+
+const DEFAULT_R2_FILENAME_TEMPLATE = "image_${YYYY}${MM}${DD}_${Timestamp}_${RAND:6}.${EXT}";
 
 function showUploadNoti() {
   message.loading("图片上传中", 0);
@@ -488,19 +517,50 @@ export const r2Upload = async ({
       throw new Error("未获取到有效的上传文件");
     }
 
+    const size = Number(config.size ?? 0);
+    const quality = clampNumber(config.quality ?? 88, 50, 100, 88);
+    let workingFile = uploadFile;
+    if (uploadFile.type && uploadFile.type.startsWith("image/")) {
+      try {
+        const maxDimension = size > 0 ? size : Number.MAX_SAFE_INTEGER;
+        const webpBlob = await compressThenWebp(uploadFile, {
+          quality: quality / 100,
+          maxWidth: maxDimension,
+          maxHeight: maxDimension,
+        });
+        workingFile = toWebpFile(webpBlob, uploadFile.name || file.name || "image");
+      } catch (error) {
+        workingFile = uploadFile;
+      }
+    }
+
     const endpoint = `https://${config.accountId}.r2.cloudflarestorage.com`;
-    const key = getOSSName(uploadFile.name || file.name || "image", config.namespace || "");
-    const contentType = uploadFile.type || file.type || "application/octet-stream";
+    const hasFilenameTemplate = Object.prototype.hasOwnProperty.call(config, "filenameTemplate");
+    const rawFilenameTemplate = hasFilenameTemplate
+      ? String(config.filenameTemplate ?? "")
+      : DEFAULT_R2_FILENAME_TEMPLATE;
+    const filenameTemplate = rawFilenameTemplate.trim();
+    let objectName = workingFile.name || uploadFile.name || file.name || "image";
+    if (filenameTemplate) {
+      let normalizedTemplate = filenameTemplate;
+      if (!normalizedTemplate.includes("${EXT}")) {
+        normalizedTemplate += ".${EXT}";
+      }
+      objectName = renderObjectName(normalizedTemplate, {file: workingFile});
+    }
+    const namespace = config.namespace || "";
+    const key = `${namespace}${objectName}`;
+    const contentType = workingFile.type || uploadFile.type || file.type || "application/octet-stream";
     if (isTauriEnv()) {
-      const filePath = uploadFile.path || file.path || "";
+      const canUseFilePath = workingFile === uploadFile;
+      const filePath = canUseFilePath ? workingFile.path || uploadFile.path || file.path || "" : "";
       let bodyBase64 = null;
       if (!filePath) {
-        bodyBase64 = await fileToBase64(uploadFile);
+        bodyBase64 = await fileToBase64(workingFile);
         if (!bodyBase64) {
           throw new Error("读取文件失败");
         }
       }
-      console.log("R2 upload via Tauri:", {key, contentType, filePath, bodyBase64});
       await withTimeout(
         invoke("r2_upload", {
           payload: {
@@ -518,7 +578,7 @@ export const r2Upload = async ({
         "上传超时，请检查网络或图床配置",
       );
     } else {
-      const fileBuffer = await uploadFile.arrayBuffer();
+      const fileBuffer = await workingFile.arrayBuffer();
       const client = new S3Client({
         region: "auto",
         endpoint,
@@ -547,7 +607,7 @@ export const r2Upload = async ({
       baseUrl = `${endpoint}/${config.bucket}/`;
     }
 
-    const names = uploadFile.name ? uploadFile.name.split(".") : [];
+    const names = objectName ? objectName.split(".") : [];
     if (names.length > 1) {
       names.pop();
     }

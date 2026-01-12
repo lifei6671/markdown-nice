@@ -69,6 +69,9 @@ if (!window.localStorage.getItem(R2_IMAGE_HOSTING)) {
     bucket: "",
     publicBaseUrl: "",
     namespace: "",
+    size: 0,
+    quality: 88,
+    filenameTemplate: "image_${YYYY}${MM}${DD}_${Timestamp}_${RAND:6}.${EXT}",
   });
   window.localStorage.setItem(R2_IMAGE_HOSTING, r2);
 }

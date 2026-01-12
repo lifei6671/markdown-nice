@@ -16,6 +16,7 @@ import appContext from "../../utils/appContext";
 const {Dragger} = Upload;
 const {TabPane} = Tabs;
 const {Option} = Select;
+const ACCEPT_IMAGE_TYPES = "image/png,image/jpeg,image/jpg,image/gif,image/webp,image/bmp,image/svg+xml";
 
 @inject("dialog")
 @inject("content")
@@ -49,8 +50,7 @@ class ImageDialog extends Component {
     // 上传后实时更新内容
     const content = markdownEditor.getValue();
     this.props.content.setContent(content);
-
-    message.success("保存成功");
+    this.props.dialog.setImageOpen(false);
   };
 
   handleCancel = () => {
@@ -121,7 +121,7 @@ class ImageDialog extends Component {
         title="本地上传"
         okText="确认"
         cancelText="取消"
-        width={650}
+        width={840}
         visible={this.props.dialog.isImageOpen}
         onOk={this.handleOk}
         onCancel={this.handleCancel}
@@ -131,7 +131,13 @@ class ImageDialog extends Component {
           {({useImageHosting}) => (
             <Tabs tabBarExtraContent={imageHostingSwitch} type="card">
               <TabPane tab="图片上传" key="1">
-                <Dragger name="file" multiple action={SM_MS_PROXY} customRequest={this.customRequest}>
+                <Dragger
+                  name="file"
+                  multiple
+                  accept={ACCEPT_IMAGE_TYPES}
+                  action={SM_MS_PROXY}
+                  customRequest={this.customRequest}
+                >
                   <p className="ant-upload-drag-icon">
                     <SvgIcon name="inbox" style={style.svgIcon} fill="#40a9ff" />
                   </p>

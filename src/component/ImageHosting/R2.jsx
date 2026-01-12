@@ -1,6 +1,8 @@
 import React, {Component} from "react";
-import {Input, Form} from "antd";
+import {Input, Form, InputNumber, Select} from "antd";
 import {R2_IMAGE_HOSTING} from "../../utils/constant";
+
+const {Option} = Select;
 
 const formItemLayout = {
   labelCol: {
@@ -14,7 +16,20 @@ const formItemLayout = {
 class R2 extends Component {
   constructor(props) {
     super(props);
-    const imageHosting = JSON.parse(localStorage.getItem(R2_IMAGE_HOSTING));
+    const defaults = {
+      accountId: "",
+      accessKeyId: "",
+      secretAccessKey: "",
+      bucket: "",
+      publicBaseUrl: "",
+      namespace: "",
+      size: 0,
+      quality: 88,
+      filenameTemplate: "image_${YYYY}${MM}${DD}_${Timestamp}_${RAND:6}.${EXT}",
+    };
+    const stored = JSON.parse(localStorage.getItem(R2_IMAGE_HOSTING)) || {};
+    const imageHosting = {...defaults, ...stored};
+    localStorage.setItem(R2_IMAGE_HOSTING, JSON.stringify(imageHosting));
     this.state = {
       imageHosting,
     };
@@ -62,8 +77,41 @@ class R2 extends Component {
     localStorage.setItem(R2_IMAGE_HOSTING, JSON.stringify(imageHosting));
   };
 
+  sizeChange = (value) => {
+    const {imageHosting} = this.state;
+    imageHosting.size = value;
+    this.setState({imageHosting});
+    localStorage.setItem(R2_IMAGE_HOSTING, JSON.stringify(imageHosting));
+  };
+
+  qualityChange = (value) => {
+    const nextValue = Number.isFinite(value) ? value : 88;
+    const quality = Math.max(50, Math.min(100, nextValue));
+    const {imageHosting} = this.state;
+    imageHosting.quality = quality;
+    this.setState({imageHosting});
+    localStorage.setItem(R2_IMAGE_HOSTING, JSON.stringify(imageHosting));
+  };
+
+  filenameTemplateChange = (e) => {
+    const {imageHosting} = this.state;
+    imageHosting.filenameTemplate = e.target.value;
+    this.setState({imageHosting});
+    localStorage.setItem(R2_IMAGE_HOSTING, JSON.stringify(imageHosting));
+  };
+
   render() {
-    const {accountId, accessKeyId, secretAccessKey, bucket, publicBaseUrl, namespace} = this.state.imageHosting;
+    const {
+      accountId,
+      accessKeyId,
+      secretAccessKey,
+      bucket,
+      publicBaseUrl,
+      namespace,
+      size,
+      quality,
+      filenameTemplate,
+    } = this.state.imageHosting;
     return (
       <Form {...formItemLayout}>
         <Form.Item label="Account ID" style={style.formItem}>
@@ -87,6 +135,28 @@ class R2 extends Component {
         </Form.Item>
         <Form.Item label="Namespace" style={style.formItem}>
           <Input value={namespace} onChange={this.namespaceChange} placeholder="例如：image/" />
+        </Form.Item>
+        <Form.Item
+          label="文件名"
+          style={style.formItem}
+          extra="示例：image_${YYYY}${MM}${DD}{hh}{mm}{ss}_${Timestamp}_${RAND:6}.${EXT}（留空则不修改文件名）"
+        >
+          <Input
+            value={filenameTemplate}
+            onChange={this.filenameTemplateChange}
+            placeholder="image_${YYYY}${MM}${DD}_${Timestamp}_${RAND:6}.${EXT}"
+          />
+        </Form.Item>
+        <Form.Item label="尺寸" style={style.formItem}>
+          <Select value={size} onChange={this.sizeChange}>
+            <Option value={0}>原图</Option>
+            <Option value={2560}>高清</Option>
+            <Option value={1920}>标准</Option>
+            <Option value={1280}>省流</Option>
+          </Select>
+        </Form.Item>
+        <Form.Item label="质量" style={style.formItem}>
+          <InputNumber min={50} max={100} value={quality} onChange={this.qualityChange} />
         </Form.Item>
         <Form.Item label="提示" style={style.formItem}>
           <span>
