@@ -9,6 +9,7 @@ import ExportConfig from "./File/ExportConfig";
 import NewFile from "./File/NewFile";
 import DocumentList from "./File/DocumentList";
 import RenameFile from "./File/RenameFile";
+import CategoryManage from "./File/CategoryManage";
 import "./common.css";
 
 const menu = (
@@ -21,6 +22,9 @@ const menu = (
     </Menu.Item>
     <Menu.Item>
       <RenameFile />
+    </Menu.Item>
+    <Menu.Item>
+      <CategoryManage />
     </Menu.Item>
     <Menu.Divider />
     <Menu.Item>

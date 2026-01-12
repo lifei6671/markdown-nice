@@ -6,6 +6,7 @@ import {AutoSaveInterval, getLocalDocuments, setLocalDocuments, setLocalDraft} f
 import IndexDB from "../LocalHistory/indexdb";
 import debouce from "lodash.debounce";
 import {countVisibleChars} from "../../utils/helper";
+import {DEFAULT_CATEGORY_ID, DEFAULT_CATEGORY_NAME} from "../../utils/constant";
 
 const DocumentID = 1;
 
@@ -121,6 +122,10 @@ class HistoryDialog extends Component {
           document_id: documentId,
           name: (current && current.name) || this.props.content.documentName || "未命名.md",
           charCount: countVisibleChars(content || ""),
+          category:
+            current && current.category != null
+              ? current.category
+              : this.props.content.documentCategoryId || DEFAULT_CATEGORY_ID,
           createdAt: (current && current.createdAt) || updatedAt,
           updatedAt,
         };
@@ -140,10 +145,10 @@ class HistoryDialog extends Component {
     try {
       const indexDB = new IndexDB({
         name: "articles",
-        version: 2,
+        version: 3,
         storeName: "article_meta",
         storeOptions: {keyPath: "document_id", autoIncrement: true},
-        storeInit: (objectStore, db) => {
+        storeInit: (objectStore, db, transaction) => {
           if (objectStore && !objectStore.indexNames.contains("name")) {
             objectStore.createIndex("name", "name", {unique: false});
           }
@@ -153,8 +158,38 @@ class HistoryDialog extends Component {
           if (objectStore && !objectStore.indexNames.contains("updatedAt")) {
             objectStore.createIndex("updatedAt", "updatedAt", {unique: false});
           }
+          if (objectStore && !objectStore.indexNames.contains("category")) {
+            objectStore.createIndex("category", "category", {unique: false});
+          }
           if (db && !db.objectStoreNames.contains("article_content")) {
             db.createObjectStore("article_content", {keyPath: "document_id"});
+          }
+          if (db) {
+            const shouldCreate = !db.objectStoreNames.contains("categories");
+            let categoriesStore = null;
+            if (shouldCreate) {
+              categoriesStore = db.createObjectStore("categories", {keyPath: "id", autoIncrement: true});
+            } else if (transaction && transaction.objectStoreNames.contains("categories")) {
+              categoriesStore = transaction.objectStore("categories");
+            }
+            if (categoriesStore && !categoriesStore.indexNames.contains("name")) {
+              categoriesStore.createIndex("name", "name", {unique: false});
+            }
+            if (categoriesStore && !categoriesStore.indexNames.contains("createdAt")) {
+              categoriesStore.createIndex("createdAt", "createdAt", {unique: false});
+            }
+            if (categoriesStore && !categoriesStore.indexNames.contains("updatedAt")) {
+              categoriesStore.createIndex("updatedAt", "updatedAt", {unique: false});
+            }
+            if (shouldCreate && categoriesStore) {
+              const now = new Date();
+              categoriesStore.add({
+                id: DEFAULT_CATEGORY_ID,
+                name: DEFAULT_CATEGORY_NAME,
+                createdAt: now,
+                updatedAt: now,
+              });
+            }
           }
         },
       });

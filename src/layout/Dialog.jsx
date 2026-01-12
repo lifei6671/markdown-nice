@@ -8,6 +8,7 @@ import SitDownDialog from "../component/Dialog/SitDownDialog";
 import NewFileDialog from "../component/Dialog/NewFileDialog";
 import DocumentListDialog from "../component/Dialog/DocumentListDialog";
 import RenameFileDialog from "../component/Dialog/RenameFileDialog";
+import CategoryManageDialog from "../component/Dialog/CategoryManageDialog";
 
 class Dialog extends Component {
   render() {
@@ -22,6 +23,7 @@ class Dialog extends Component {
         <NewFileDialog />
         <DocumentListDialog />
         <RenameFileDialog />
+        <CategoryManageDialog />
       </div>
     );
   }

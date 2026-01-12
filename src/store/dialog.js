@@ -23,6 +23,8 @@ class Dialog {
 
   @observable isRenameFileOpen = false;
 
+  @observable isCategoryManageOpen = false;
+
   @action
   setImageOpen = (isImageOpen) => {
     this.isImageOpen = isImageOpen;
@@ -76,6 +78,11 @@ class Dialog {
   @action
   setRenameFileOpen = (isRenameFileOpen) => {
     this.isRenameFileOpen = isRenameFileOpen;
+  };
+
+  @action
+  setCategoryManageOpen = (isCategoryManageOpen) => {
+    this.isCategoryManageOpen = isCategoryManageOpen;
   };
 }
 

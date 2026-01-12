@@ -12,7 +12,7 @@ Markdown Nice 是一个可编辑主题的 Markdown 编辑器，适用于公众�
 - 新增文档列表管理功能，支持新建文档、查看历史文档以及编辑和删除历史文档
 - 支持图床配置的导入和导出，方便跨浏览器同步配置
 
-主页：https://mdnice.disign.me
+欢迎在线使用：<https://mdnice.disign.me>
 
 > 有疑问请参考 [如何有效的解决 mdnice 相关问题？](https://github.com/mdnice/markdown-nice/issues/163)
 

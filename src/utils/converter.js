@@ -10,6 +10,66 @@ import {
   MJX_DATA_FORMULA,
 } from "./constant";
 
+const MERMAID_SVG_STYLE_PROPS = [
+  "fill",
+  "fill-opacity",
+  "stroke",
+  "stroke-opacity",
+  "stroke-width",
+  "stroke-dasharray",
+  "stroke-dashoffset",
+  "stroke-linecap",
+  "stroke-linejoin",
+  "stroke-miterlimit",
+  "font-family",
+  "font-size",
+  "font-weight",
+  "font-style",
+  "color",
+  "opacity",
+  "text-anchor",
+  "text-align",
+  "dominant-baseline",
+  "alignment-baseline",
+  "letter-spacing",
+  "word-spacing",
+  "background-color",
+  "shape-rendering",
+  "marker-start",
+  "marker-mid",
+  "marker-end",
+  "pointer-events",
+];
+
+const inlineMermaidSvgStyles = (root) => {
+  if (!root) {
+    return;
+  }
+  const svgs = root.querySelectorAll(".mermaid svg");
+  svgs.forEach((svg) => {
+    const nodes = [svg, ...svg.querySelectorAll("*")];
+    nodes.forEach((node) => {
+      if (node.nodeType !== 1) {
+        return;
+      }
+      const computed = window.getComputedStyle(node);
+      const parts = [];
+      MERMAID_SVG_STYLE_PROPS.forEach((prop) => {
+        const value = computed.getPropertyValue(prop);
+        if (value) {
+          parts.push(`${prop}:${value}`);
+        }
+      });
+      if (parts.length) {
+        const existing = node.getAttribute("style");
+        const merged = existing ? `${existing};${parts.join(";")}` : parts.join(";");
+        node.setAttribute("style", merged);
+      }
+    });
+    svg.querySelectorAll("style").forEach((styleNode) => styleNode.remove());
+  });
+};
+
 export const solveWeChatMath = () => {
   const layout = document.getElementById(LAYOUT_ID);
   const mjxs = layout.getElementsByTagName("mjx-container");
@@ -85,6 +145,7 @@ export const juejinSuffix = () => {
 
 export const solveHtml = () => {
   const element = document.getElementById(BOX_ID);
+  inlineMermaidSvgStyles(element);
 
   const inner = element.children[0].children;
   for (const item of inner) {

@@ -16,6 +16,8 @@ export const CONTENT = "content";
 export const DOCUMENT_ID = "document_id";
 export const DOCUMENT_NAME = "document_name";
 export const DOCUMENT_UPDATED_AT = "document_updated_at";
+export const DOCUMENT_CATEGORY_ID = "document_category_id";
+export const DOCUMENT_CATEGORY_NAME = "document_category_name";
 export const STYLE = "style";
 export const TEMPLATE_NUM = "template_num";
 export const CODE_NUM = "code_num";
@@ -39,6 +41,8 @@ export const IMAGE_HOSTING_NAMES = {
   qiniuyun: "七牛云",
   r2: "CF R2",
 };
+export const DEFAULT_CATEGORY_ID = 1;
+export const DEFAULT_CATEGORY_NAME = "默认目录";
 
 export const RIGHT_SYMBOL = "✔️";
 export const EXPORT_FILENAME_SUFFIX = ".md";

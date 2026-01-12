@@ -3,6 +3,7 @@ import {observer, inject} from "mobx-react";
 import {Modal, Table, Button, Empty, message} from "antd";
 import IndexDB from "../LocalHistory/indexdb";
 import {countVisibleChars} from "../../utils/helper";
+import {DEFAULT_CATEGORY_ID, DEFAULT_CATEGORY_NAME} from "../../utils/constant";
 
 @inject("dialog")
 @inject("content")
@@ -48,10 +49,10 @@ class DocumentListDialog extends Component {
     try {
       const indexDB = new IndexDB({
         name: "articles",
-        version: 2,
+        version: 3,
         storeName: "article_meta",
         storeOptions: {keyPath: "document_id", autoIncrement: true},
-        storeInit: (objectStore, db) => {
+        storeInit: (objectStore, db, transaction) => {
           if (objectStore && !objectStore.indexNames.contains("name")) {
             objectStore.createIndex("name", "name", {unique: false});
           }
@@ -61,8 +62,38 @@ class DocumentListDialog extends Component {
           if (objectStore && !objectStore.indexNames.contains("updatedAt")) {
             objectStore.createIndex("updatedAt", "updatedAt", {unique: false});
           }
+          if (objectStore && !objectStore.indexNames.contains("category")) {
+            objectStore.createIndex("category", "category", {unique: false});
+          }
           if (db && !db.objectStoreNames.contains("article_content")) {
             db.createObjectStore("article_content", {keyPath: "document_id"});
+          }
+          if (db) {
+            const shouldCreate = !db.objectStoreNames.contains("categories");
+            let categoriesStore = null;
+            if (shouldCreate) {
+              categoriesStore = db.createObjectStore("categories", {keyPath: "id", autoIncrement: true});
+            } else if (transaction && transaction.objectStoreNames.contains("categories")) {
+              categoriesStore = transaction.objectStore("categories");
+            }
+            if (categoriesStore && !categoriesStore.indexNames.contains("name")) {
+              categoriesStore.createIndex("name", "name", {unique: false});
+            }
+            if (categoriesStore && !categoriesStore.indexNames.contains("createdAt")) {
+              categoriesStore.createIndex("createdAt", "createdAt", {unique: false});
+            }
+            if (categoriesStore && !categoriesStore.indexNames.contains("updatedAt")) {
+              categoriesStore.createIndex("updatedAt", "updatedAt", {unique: false});
+            }
+            if (shouldCreate && categoriesStore) {
+              const now = new Date();
+              categoriesStore.add({
+                id: DEFAULT_CATEGORY_ID,
+                name: DEFAULT_CATEGORY_NAME,
+                createdAt: now,
+                updatedAt: now,
+              });
+            }
           }
         },
       });
@@ -260,6 +291,7 @@ class DocumentListDialog extends Component {
             document_id: documentId,
             name: legacy.name || "未命名.md",
             charCount,
+            category: DEFAULT_CATEGORY_ID,
             createdAt,
             updatedAt,
           };
@@ -312,8 +344,10 @@ class DocumentListDialog extends Component {
     }
     try {
       const content = await this.loadContent(article.document_id);
+      const categoryInfo = await this.resolveCategoryInfo(article.category);
       this.props.content.setDocumentId(article.document_id);
       this.props.content.setDocumentName(article.name || "未命名.md");
+      this.props.content.setDocumentCategory(categoryInfo.id, categoryInfo.name);
       this.props.content.setDocumentUpdatedAt(article.updatedAt || article.createdAt || 0);
       this.props.content.setContent(content);
       const {markdownEditor} = this.props.content;
@@ -326,6 +360,53 @@ class DocumentListDialog extends Component {
       console.error(e);
       message.error("加载文档失败");
     }
+  };
+
+  resolveCategoryInfo = async (value) => {
+    if (!this.db || !this.db.objectStoreNames.contains("categories")) {
+      return {id: DEFAULT_CATEGORY_ID, name: DEFAULT_CATEGORY_NAME};
+    }
+    const categories = await new Promise((resolve) => {
+      const transaction = this.db.transaction(["categories"], "readonly");
+      const store = transaction.objectStore("categories");
+      const items = [];
+      const request = store.openCursor();
+      request.onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (cursor) {
+          items.push(cursor.value);
+          cursor.continue();
+        } else {
+          resolve(items);
+        }
+      };
+      request.onerror = () => resolve([]);
+    });
+    const mapById = new Map();
+    const mapByName = new Map();
+    categories.forEach((category) => {
+      mapById.set(category.id, category);
+      if (category.name) {
+        mapByName.set(category.name, category);
+      }
+    });
+    if (typeof value === "number" && mapById.has(value)) {
+      const category = mapById.get(value);
+      return {id: category.id, name: category.name || DEFAULT_CATEGORY_NAME};
+    }
+    if (typeof value === "string" && value.trim()) {
+      const trimmed = value.trim();
+      if (mapByName.has(trimmed)) {
+        const category = mapByName.get(trimmed);
+        return {id: category.id, name: category.name || DEFAULT_CATEGORY_NAME};
+      }
+      const parsed = Number(trimmed);
+      if (!Number.isNaN(parsed) && mapById.has(parsed)) {
+        const category = mapById.get(parsed);
+        return {id: category.id, name: category.name || DEFAULT_CATEGORY_NAME};
+      }
+    }
+    return {id: DEFAULT_CATEGORY_ID, name: DEFAULT_CATEGORY_NAME};
   };
 
   loadContent = (documentId) => {

@@ -25,6 +25,7 @@ import {
   IMAGE_HOSTING_TYPE,
   MJX_DATA_FORMULA,
   MJX_DATA_FORMULA_TYPE,
+  DEFAULT_CATEGORY_NAME,
 } from "./utils/constant";
 import {countVisibleChars, markdownParser, markdownParserWechat, updateMathjax} from "./utils/helper";
 import pluginCenter from "./utils/pluginCenter";
@@ -44,6 +45,7 @@ class App extends Component {
     this.focus = false;
     this.scale = 1;
     this.handleUpdateMathjax = throttle(updateMathjax, 1500);
+    this.handleUpdateMermaid = throttle(this.updateMermaid, 800);
   }
 
   componentDidMount() {
@@ -86,6 +88,7 @@ class App extends Component {
     } catch (e) {
       console.log(e);
     }
+    this.initMermaid();
     this.setEditorContent();
     this.setCustomImageHosting();
   }
@@ -93,6 +96,9 @@ class App extends Component {
   componentDidUpdate() {
     if (pluginCenter.mathjax) {
       this.handleUpdateMathjax();
+    }
+    if (pluginCenter.mermaid) {
+      this.handleUpdateMermaid();
     }
   }
 
@@ -153,6 +159,23 @@ class App extends Component {
   setCurrentIndex(index) {
     this.index = index;
   }
+
+  initMermaid = () => {
+    import("mermaid")
+      .then((module) => {
+        const mermaid = module.default || module;
+        this.mermaid = mermaid;
+        mermaid.initialize({
+          startOnLoad: false,
+          securityLevel: "strict",
+        });
+        pluginCenter.mermaid = true;
+        this.handleUpdateMermaid();
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+  };
 
   solveScreenChange = () => {
     const {isImmersiveEditing} = this.props.view;
@@ -228,6 +251,25 @@ class App extends Component {
     }
   };
 
+  updateMermaid = () => {
+    if (!this.mermaid || !this.previewWrap) {
+      return;
+    }
+    const nodes = Array.from(this.previewWrap.querySelectorAll(".mermaid")).filter(
+      (node) => !node.getAttribute("data-processed"),
+    );
+    if (!nodes.length) {
+      return;
+    }
+    if (typeof this.mermaid.run === "function") {
+      this.mermaid.run({nodes});
+      return;
+    }
+    if (typeof this.mermaid.init === "function") {
+      this.mermaid.init(undefined, nodes);
+    }
+  };
+
   addContainer(math, doc) {
     const tag = "span";
     const spanClass = math.display ? "span-block-equation" : "span-inline-equation";
@@ -243,6 +285,7 @@ class App extends Component {
     const {isEditAreaOpen, isPreviewAreaOpen, isStyleEditorOpen, isImmersiveEditing} = this.props.view;
     const {isSearchOpen} = this.props.dialog;
     const {content, documentName, documentUpdatedAt} = this.props.content;
+    const categoryName = this.props.content.documentCategoryName || DEFAULT_CATEGORY_NAME;
     const markdownLength = countVisibleChars(content || "");
     const lastSavedText = documentUpdatedAt ? new Date(documentUpdatedAt).toLocaleString() : "未保存";
 
@@ -346,15 +389,18 @@ class App extends Component {
             </div>
             <div className={statusBarClass}>
               <div className="nice-status-item nice-status-item-main">
-                文件名:
+                <b>归属目录: </b>
+                {categoryName}
+                &nbsp;
+                <b>文件名: </b>
                 {documentName || "未命名.md"}
               </div>
               <div className="nice-status-item">
-                最后保存时间:
+                <b>最后保存时间: </b>
                 {lastSavedText}
               </div>
               <div className="nice-status-item">
-                字符数:
+                <b>字符数:</b>
                 {markdownLength}
               </div>
             </div>
