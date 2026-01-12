@@ -1,6 +1,9 @@
 import {observable, action} from "mobx";
 import {
   CONTENT,
+  DOCUMENT_ID,
+  DOCUMENT_NAME,
+  DOCUMENT_UPDATED_AT,
   STYLE,
   TEMPLATE_OPTIONS,
   TEMPLATE_NUM,
@@ -19,6 +22,12 @@ class Content {
 
   @observable markdownEditor;
 
+  @observable documentId;
+
+  @observable documentName;
+
+  @observable documentUpdatedAt;
+
   @action
   setMarkdownEditor = (markdownEditor) => {
     this.markdownEditor = markdownEditor;
@@ -28,6 +37,31 @@ class Content {
   setContent = (content) => {
     this.content = content;
     window.localStorage.setItem(CONTENT, content);
+  };
+
+  @action
+  setDocumentId = (documentId) => {
+    this.documentId = documentId;
+    window.localStorage.setItem(DOCUMENT_ID, String(documentId));
+  };
+
+  @action
+  setDocumentName = (documentName) => {
+    this.documentName = documentName;
+    window.localStorage.setItem(DOCUMENT_NAME, documentName || "");
+  };
+
+  @action
+  setDocumentUpdatedAt = (documentUpdatedAt) => {
+    let nextValue = 0;
+    if (documentUpdatedAt instanceof Date) {
+      nextValue = documentUpdatedAt.getTime();
+    } else if (documentUpdatedAt != null) {
+      const parsed = Number(documentUpdatedAt);
+      nextValue = Number.isNaN(parsed) ? 0 : parsed;
+    }
+    this.documentUpdatedAt = nextValue;
+    window.localStorage.setItem(DOCUMENT_UPDATED_AT, String(nextValue));
   };
 
   @action
@@ -53,6 +87,15 @@ const store = new Content();
 // 如果为空先把数据放进去
 if (window.localStorage.getItem(CONTENT) === null) {
   window.localStorage.setItem(CONTENT, TEMPLATE.content);
+}
+if (window.localStorage.getItem(DOCUMENT_ID) === null) {
+  window.localStorage.setItem(DOCUMENT_ID, "1");
+}
+if (window.localStorage.getItem(DOCUMENT_NAME) === null) {
+  window.localStorage.setItem(DOCUMENT_NAME, "未命名.md");
+}
+if (window.localStorage.getItem(DOCUMENT_UPDATED_AT) === null) {
+  window.localStorage.setItem(DOCUMENT_UPDATED_AT, "0");
 }
 if (!window.localStorage.getItem(STYLE)) {
   window.localStorage.setItem(STYLE, TEMPLATE.style.custom);
@@ -81,5 +124,8 @@ replaceStyle(BASIC_THEME_ID, TEMPLATE.basic);
 replaceStyle(MARKDOWN_THEME_ID, store.style);
 
 store.content = window.localStorage.getItem(CONTENT);
+store.documentId = parseInt(window.localStorage.getItem(DOCUMENT_ID), 10) || 1;
+store.documentName = window.localStorage.getItem(DOCUMENT_NAME) || "未命名.md";
+store.documentUpdatedAt = parseInt(window.localStorage.getItem(DOCUMENT_UPDATED_AT), 10) || 0;
 
 export default store;

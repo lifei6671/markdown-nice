@@ -5,6 +5,7 @@ import LocalHistory from "../LocalHistory";
 import {AutoSaveInterval, getLocalDocuments, setLocalDocuments, setLocalDraft} from "../LocalHistory/util";
 import IndexDB from "../LocalHistory/indexdb";
 import debouce from "lodash.debounce";
+import {countVisibleChars} from "../../utils/helper";
 
 const DocumentID = 1;
 
@@ -16,6 +17,8 @@ class HistoryDialog extends Component {
 
   db = null;
 
+  articlesDb = null;
+
   constructor(props) {
     super(props);
     this.state = {
@@ -25,6 +28,19 @@ class HistoryDialog extends Component {
 
   async componentDidMount() {
     await this.initIndexDB();
+    await this.initArticleDB();
+  }
+
+  componentDidUpdate(prevProps) {
+    const prevDocumentId = this.getDocumentId(prevProps);
+    const currentDocumentId = this.getDocumentId();
+    if (prevDocumentId !== currentDocumentId && this.db) {
+      if (currentDocumentId) {
+        this.overrideLocalDocuments(currentDocumentId);
+      } else {
+        this.setState({documents: []});
+      }
+    }
   }
 
   componentWillUnmount() {
@@ -34,6 +50,13 @@ class HistoryDialog extends Component {
   get editor() {
     return this.props.content.markdownEditor;
   }
+
+  getDocumentId = (props = this.props) => {
+    if (props.content && props.content.documentId != null) {
+      return props.content.documentId;
+    }
+    return props.documentID;
+  };
 
   //
   // async UNSAFE_componentWillReceiveProps(nextProps) {
@@ -58,17 +81,88 @@ class HistoryDialog extends Component {
 
   autoSave = async (isRecent = false) => {
     const Content = this.props.content.markdownEditor.getValue();
+    const documentId = this.getDocumentId();
+    if (!documentId) {
+      return;
+    }
     if (Content.trim() !== "") {
+      const now = new Date();
       const document = {
         Content,
-        DocumentID: this.props.documentID,
-        SaveTime: new Date(),
+        DocumentID: documentId,
+        SaveTime: now,
       };
       const setLocalDocumentMethod = isRecent && this.state.documents.length > 0 ? setLocalDraft : setLocalDocuments;
       await setLocalDocumentMethod(this.db, this.state.documents, document);
-      await this.overrideLocalDocuments(this.props.documentID);
+      await this.overrideLocalDocuments(documentId);
+      await this.saveArticleContent(documentId, Content, now);
+      this.props.content.setDocumentUpdatedAt(now);
     }
   };
+
+  saveArticleContent = async (documentId, content, updatedAt) => {
+    if (!documentId) {
+      return;
+    }
+    if (!this.articlesDb) {
+      await this.initArticleDB();
+    }
+    if (!this.articlesDb) {
+      return;
+    }
+    await new Promise((resolve, reject) => {
+      const transaction = this.articlesDb.transaction(["article_meta", "article_content"], "readwrite");
+      const metaStore = transaction.objectStore("article_meta");
+      const contentStore = transaction.objectStore("article_content");
+      const req = metaStore.get(documentId);
+      req.onsuccess = () => {
+        const current = req.result;
+        const payload = {
+          document_id: documentId,
+          name: (current && current.name) || this.props.content.documentName || "未命名.md",
+          charCount: countVisibleChars(content || ""),
+          createdAt: (current && current.createdAt) || updatedAt,
+          updatedAt,
+        };
+        metaStore.put(payload);
+        contentStore.put({
+          document_id: documentId,
+          content,
+        });
+      };
+      req.onerror = (event) => reject(event);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = (event) => reject(event);
+    });
+  };
+
+  async initArticleDB() {
+    try {
+      const indexDB = new IndexDB({
+        name: "articles",
+        version: 2,
+        storeName: "article_meta",
+        storeOptions: {keyPath: "document_id", autoIncrement: true},
+        storeInit: (objectStore, db) => {
+          if (objectStore && !objectStore.indexNames.contains("name")) {
+            objectStore.createIndex("name", "name", {unique: false});
+          }
+          if (objectStore && !objectStore.indexNames.contains("createdAt")) {
+            objectStore.createIndex("createdAt", "createdAt", {unique: false});
+          }
+          if (objectStore && !objectStore.indexNames.contains("updatedAt")) {
+            objectStore.createIndex("updatedAt", "updatedAt", {unique: false});
+          }
+          if (db && !db.objectStoreNames.contains("article_content")) {
+            db.createObjectStore("article_content", {keyPath: "document_id"});
+          }
+        },
+      });
+      this.articlesDb = await indexDB.init();
+    } catch (e) {
+      console.error(e);
+    }
+  }
 
   async initIndexDB() {
     try {
@@ -83,8 +177,9 @@ class HistoryDialog extends Component {
       });
       this.db = await indexDB.init();
 
-      if (this.db && this.props.documentID) {
-        await this.overrideLocalDocuments(this.props.documentID);
+      const documentId = this.getDocumentId();
+      if (this.db && documentId) {
+        await this.overrideLocalDocuments(documentId);
       }
       // 每隔一段时间自动保存
       this.timer = setInterval(async () => {
@@ -127,7 +222,7 @@ class HistoryDialog extends Component {
           <LocalHistory
             content={this.props.content.content}
             documents={this.state.documents}
-            documentID={this.props.documentID}
+            documentID={this.getDocumentId()}
             onEdit={this.editLocalDocument}
             onCancel={this.closeDialog}
           />

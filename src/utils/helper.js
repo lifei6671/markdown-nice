@@ -266,9 +266,18 @@ export const addStyleLabel = (styleLabels) => {
 };
 
 export const updateMathjax = () => {
-  window.MathJax.texReset();
-  window.MathJax.typesetClear();
-  window.MathJax.typesetPromise();
+  if (!window.MathJax) {
+    return;
+  }
+  if (typeof window.MathJax.texReset === "function") {
+    window.MathJax.texReset();
+  }
+  if (typeof window.MathJax.typesetClear === "function") {
+    window.MathJax.typesetClear();
+  }
+  if (typeof window.MathJax.typesetPromise === "function") {
+    window.MathJax.typesetPromise();
+  }
 };
 
 export const download = (content, filename) => {
@@ -286,3 +295,75 @@ export const download = (content, filename) => {
 };
 
 export const isPlatformWindows = /windows|win32/i.test(navigator.userAgent);
+
+// 仅用于获取纯文本的markdown解析器
+const markdownParserRaw = new MarkdownIt({
+  html: false, // 不把 HTML 当文本（可按需）
+  linkify: true,
+  typographer: false,
+});
+
+/**
+ * 取“可见文本”（不含 Markdown 符号）
+ * @param {string} markdown
+ * @param {object} opts
+ * @param {boolean} opts.includeCode 代码块/行内代码是否计入（默认 true）
+ * @returns {string}
+ */
+export function extractVisibleText(markdown, opts = {}) {
+  const {includeCode = true} = opts;
+
+  const tokens = markdownParserRaw.parse(markdown ?? "", {});
+  const parts = [];
+
+  // 递归遍历 token（markdown-it 的 token 结构是嵌套的）
+  const walk = (toks) => {
+    for (const t of toks) {
+      // 普通文本
+      if (t.type === "text") {
+        parts.push(t.content);
+        continue;
+      }
+
+      // 图片：把 alt 文本算作可见文本
+      if (t.type === "image") {
+        const alt = t.content || "";
+        if (alt) parts.push(alt);
+        continue;
+      }
+
+      // 代码：是否计入可见文本
+      if (!includeCode && (t.type === "code_inline" || t.type === "code_block" || t.type === "fence")) {
+        continue;
+      }
+      if (includeCode && (t.type === "code_inline" || t.type === "code_block" || t.type === "fence")) {
+        parts.push(t.content || "");
+        continue;
+      }
+
+      // 有子 token 的（inline、list、blockquote、table 等都会走这里）
+      if (t.children && t.children.length) {
+        walk(t.children);
+      }
+    }
+  };
+
+  walk(tokens);
+
+  // 统一空白：把各种空白压成单空格，避免“空白膨胀”
+  return parts
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * 统计“字数”（更接近中文写作平台口径）
+ * - 默认不计空白
+ * - 按 Unicode code point 计数，避免 emoji 被当成 2 个字符
+ */
+export function countVisibleChars(markdown, opts = {}) {
+  const text = extractVisibleText(markdown, opts);
+  const noSpace = text.replace(/\s/g, "");
+  return Array.from(noSpace).length;
+}

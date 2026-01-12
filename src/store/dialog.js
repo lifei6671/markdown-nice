@@ -17,6 +17,12 @@ class Dialog {
 
   @observable isSitDownOpen = false;
 
+  @observable isNewFileOpen = false;
+
+  @observable isDocumentListOpen = false;
+
+  @observable isRenameFileOpen = false;
+
   @action
   setImageOpen = (isImageOpen) => {
     this.isImageOpen = isImageOpen;
@@ -55,6 +61,21 @@ class Dialog {
   @action
   setSitDownOpen = (isSitDownOpen) => {
     this.isSitDownOpen = isSitDownOpen;
+  };
+
+  @action
+  setNewFileOpen = (isNewFileOpen) => {
+    this.isNewFileOpen = isNewFileOpen;
+  };
+
+  @action
+  setDocumentListOpen = (isDocumentListOpen) => {
+    this.isDocumentListOpen = isDocumentListOpen;
+  };
+
+  @action
+  setRenameFileOpen = (isRenameFileOpen) => {
+    this.isRenameFileOpen = isRenameFileOpen;
   };
 }
 

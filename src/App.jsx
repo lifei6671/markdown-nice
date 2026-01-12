@@ -26,7 +26,7 @@ import {
   MJX_DATA_FORMULA,
   MJX_DATA_FORMULA_TYPE,
 } from "./utils/constant";
-import {markdownParser, markdownParserWechat, updateMathjax} from "./utils/helper";
+import {countVisibleChars, markdownParser, markdownParserWechat, updateMathjax} from "./utils/helper";
 import pluginCenter from "./utils/pluginCenter";
 import appContext from "./utils/appContext";
 import {uploadAdaptor} from "./utils/imageHosting";
@@ -242,11 +242,11 @@ class App extends Component {
     const {codeNum, previewType} = this.props.navbar;
     const {isEditAreaOpen, isPreviewAreaOpen, isStyleEditorOpen, isImmersiveEditing} = this.props.view;
     const {isSearchOpen} = this.props.dialog;
+    const {content, documentName, documentUpdatedAt} = this.props.content;
+    const markdownLength = countVisibleChars(content || "");
+    const lastSavedText = documentUpdatedAt ? new Date(documentUpdatedAt).toLocaleString() : "未保存";
 
-    const parseHtml =
-      codeNum === 0
-        ? markdownParserWechat.render(this.props.content.content)
-        : markdownParser.render(this.props.content.content);
+    const parseHtml = codeNum === 0 ? markdownParserWechat.render(content) : markdownParser.render(content);
 
     const mdEditingClass = classnames({
       "nice-md-editing": !isImmersiveEditing,
@@ -273,6 +273,11 @@ class App extends Component {
     const textContainerClass = classnames({
       "nice-text-container": !isImmersiveEditing,
       "nice-text-container-immersive": isImmersiveEditing,
+    });
+
+    const statusBarClass = classnames({
+      "nice-status-bar": true,
+      "nice-status-bar-hide": isImmersiveEditing,
     });
 
     return (
@@ -319,7 +324,7 @@ class App extends Component {
                   <section
                     id={LAYOUT_ID}
                     data-tool="mdnice编辑器"
-                    data-website="https://www.mdnice.com"
+                    data-website="https://mdnice.disign.me"
                     dangerouslySetInnerHTML={{
                       __html: parseHtml,
                     }}
@@ -338,6 +343,20 @@ class App extends Component {
 
               <Dialog />
               <EditorMenu />
+            </div>
+            <div className={statusBarClass}>
+              <div className="nice-status-item nice-status-item-main">
+                文件名:
+                {documentName || "未命名.md"}
+              </div>
+              <div className="nice-status-item">
+                最后保存时间:
+                {lastSavedText}
+              </div>
+              <div className="nice-status-item">
+                字符数:
+                {markdownLength}
+              </div>
             </div>
           </div>
         )}

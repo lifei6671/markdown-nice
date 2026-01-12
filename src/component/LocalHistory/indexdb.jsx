@@ -20,13 +20,13 @@ export default class IndexDB {
       throw Error("浏览器不支持 indexdb");
     }
 
-    const {name, storeName = "", storeOptions = {}, storeInit = () => {}} = this.options;
+    const {name, version, storeName = "", storeOptions = {}, storeInit = () => {}} = this.options;
 
     this.storeName = storeName;
     this.storeOptions = storeOptions;
     this.storeInit = storeInit;
 
-    const request = indexedDB.open(name);
+    const request = version ? indexedDB.open(name, version) : indexedDB.open(name);
     const result = await this.initEvent(request);
     return result;
   }
@@ -50,14 +50,24 @@ export default class IndexDB {
       request.onupgradeneeded = (event) => {
         // 更新对象存储空间和索引 ....
         const db = event.target.result;
-        this.initStore(db, this.storeName, this.storeOptions, this.storeInit);
+        const {transaction} = event.target;
+        this.initStore(db, transaction, this.storeName, this.storeOptions, this.storeInit);
       };
     });
   }
 
-  initStore(db, name, options, func) {
+  initStore(db, transaction, name, options, func) {
     // 创建一个对象存储空间来持有信息。
-    const objectStore = db.createObjectStore(name, options);
-    if (func) func(objectStore);
+    if (!name) {
+      if (func) func(null, db, transaction);
+      return;
+    }
+    let objectStore = null;
+    if (db.objectStoreNames.contains(name)) {
+      objectStore = transaction ? transaction.objectStore(name) : null;
+    } else {
+      objectStore = db.createObjectStore(name, options);
+    }
+    if (func) func(objectStore, db, transaction);
   }
 }

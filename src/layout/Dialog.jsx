@@ -5,6 +5,9 @@ import AboutDialog from "../component/Dialog/AboutDialog";
 import FormDialog from "../component/Dialog/FormDialog";
 import HistoryDialog from "../component/Dialog/HistoryDialog";
 import SitDownDialog from "../component/Dialog/SitDownDialog";
+import NewFileDialog from "../component/Dialog/NewFileDialog";
+import DocumentListDialog from "../component/Dialog/DocumentListDialog";
+import RenameFileDialog from "../component/Dialog/RenameFileDialog";
 
 class Dialog extends Component {
   render() {
@@ -16,6 +19,9 @@ class Dialog extends Component {
         <FormDialog />
         <HistoryDialog />
         <SitDownDialog />
+        <NewFileDialog />
+        <DocumentListDialog />
+        <RenameFileDialog />
       </div>
     );
   }

@@ -13,6 +13,9 @@ export const MJX_DATA_FORMULA = "data-formula";
 export const MJX_DATA_FORMULA_TYPE = "data-formula-type";
 
 export const CONTENT = "content";
+export const DOCUMENT_ID = "document_id";
+export const DOCUMENT_NAME = "document_name";
+export const DOCUMENT_UPDATED_AT = "document_updated_at";
 export const STYLE = "style";
 export const TEMPLATE_NUM = "template_num";
 export const CODE_NUM = "code_num";
