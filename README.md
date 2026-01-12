@@ -1,5 +1,11 @@
 # Markdown Nice
 
+<p align="center">
+  <a href="https://github.com/lifei6671/markdown-nice/actions/workflows/ci.yml?branch=main"><img src="https://img.shields.io/github/actions/workflow/status/clawdbot/clawdbot/ci.yml?branch=main&style=for-the-badge" alt="CI status"></a>
+  <a href="https://github.com/lifei6671/markdown-nice/releases"><img src="https://img.shields.io/github/v/release/lifei6671/markdown-nice?include_prereleases&style=for-the-badge" alt="GitHub release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-gpl3.0-blue.svg?style=for-the-badge" alt="GPL 3.0 License"></a>
+</p>
+
 ## 简介
 
 本项目基于 [markdown-nice](https://github.com/whaoa/markdown-nice) 进行二次开发，再次对原项目所有贡献者表示感谢。
