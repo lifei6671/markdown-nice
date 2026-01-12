@@ -59,6 +59,12 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+      - name: Install NASM (Windows)
+        if: runner.os == 'Windows'
+        run: choco install -y nasm
+      - name: Install NASM (macOS)
+        if: runner.os == 'macOS'
+        run: brew install nasm
       - name: Build Tauri
         run: pnpm tauri:build
       - name: Upload Tauri to release

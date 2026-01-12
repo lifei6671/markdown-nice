@@ -19,6 +19,47 @@ import {
 } from "./constant";
 import {S3Client, PutObjectCommand} from "@aws-sdk/client-s3";
 import {toBlob, getOSSName, axiosMdnice} from "./helper";
+import {invoke} from "@tauri-apps/api/tauri";
+import createQiniuUploadToken from "./qiuniu";
+
+function isTauriEnv() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  return (
+    // eslint-disable-next-line no-underscore-dangle
+    typeof window.__TAURI_IPC__ === "function" || (window.__TAURI__ && typeof window.__TAURI__.invoke === "function")
+  );
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result || "";
+      if (typeof result !== "string") {
+        reject(new Error("读取文件失败"));
+        return;
+      }
+      const base64 = result.split(",").pop() || "";
+      resolve(base64);
+    };
+    reader.onerror = () => reject(reader.error || new Error("读取文件失败"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function withTimeout(promise, timeoutMs, errorMessage) {
+  let timer = null;
+  const timeoutPromise = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(errorMessage)), timeoutMs);
+  });
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  });
+}
 
 function showUploadNoti() {
   message.loading("图片上传中", 0);
@@ -66,8 +107,25 @@ export const qiniuOSSUpload = async ({
     if (domain[domain.length - 1] !== "/") {
       domain += "/";
     }
-    const result = await axiosMdnice.get(`/qiniu/${config.bucket}/${config.accessKey}/${config.secretKey}`);
-    const token = result.data;
+    // const result = await axiosMdnice.get(`/qiniu/${config.bucket}/${config.accessKey}/${config.secretKey}`);
+    // const token = result.data;
+
+    // 关键改动：不再请求后端；前端本地生成 token
+    // 这里 scope 建议绑定到具体 OSSName（更收敛）。如果你希望“随机 key”，也可以只传 bucket。
+    const OSSName = getOSSName(file.name, namespace);
+
+    // 这里在前端计算token，非常不安全！但是为了方便没有后端应用的开发者使用，只能这么干！
+    const token = await createQiniuUploadToken({
+      accessKey: config.accessKey,
+      secretKey: config.secretKey,
+      bucket: config.bucket,
+      key: OSSName, // 推荐：绑定 key
+      expiresSeconds: 10 * 60, // 推荐：短一点，10 分钟
+      extraPolicy: {
+        // 可选：如果你不希望覆盖同名文件，可以打开 insertOnly
+        // insertOnly: 1,
+      },
+    });
 
     const base64Reader = new FileReader();
 
@@ -95,9 +153,6 @@ export const qiniuOSSUpload = async ({
         params: {},
         mimeType: [] || null,
       };
-
-      const OSSName = getOSSName(file.name, namespace);
-
       // 这里第一个参数的形式是blob
       const imageObservable = qiniu.upload(blob, OSSName, token, putExtra, conf);
 
@@ -319,7 +374,7 @@ const aliOSSPutObject = ({config, file, buffer, onSuccess, onError, images, cont
 };
 
 // 阿里云对象存储上传，处理部分
-export const aliOSSUpload = ({
+export const aliOSSUpload = async ({
   file = {},
   onSuccess = () => {},
   onError = () => {},
@@ -328,6 +383,67 @@ export const aliOSSUpload = ({
 }) => {
   showUploadNoti();
   const config = JSON.parse(window.localStorage.getItem(ALIOSS_IMAGE_HOSTING));
+  if (isTauriEnv()) {
+    try {
+      const uploadFile = file && file.originFileObj ? file.originFileObj : file;
+      if (!uploadFile || typeof uploadFile.arrayBuffer !== "function") {
+        throw new Error("未获取到有效的上传文件");
+      }
+
+      const key = getOSSName(uploadFile.name || file.name || "image");
+      const contentType = uploadFile.type || file.type || "application/octet-stream";
+      const filePath = uploadFile.path || file.path || "";
+      let bodyBase64 = null;
+      if (!filePath) {
+        bodyBase64 = await fileToBase64(uploadFile);
+        if (!bodyBase64) {
+          throw new Error("读取文件失败");
+        }
+      }
+
+      await withTimeout(
+        invoke("alioss_upload", {
+          payload: {
+            region: config.region,
+            accessKeyId: config.accessKeyId,
+            accessKeySecret: config.accessKeySecret,
+            bucket: config.bucket,
+            key,
+            contentType,
+            filePath,
+            bodyBase64,
+          },
+        }),
+        30000,
+        "上传超时，请检查网络或图床配置",
+      );
+
+      const names = uploadFile.name ? uploadFile.name.split(".") : [];
+      if (names.length > 1) {
+        names.pop();
+      }
+      const filename = names.length ? names.join(".") : "image";
+      const baseUrl = `https://${config.bucket}.${config.region}.aliyuncs.com/`;
+      const image = {
+        filename,
+        url: encodeURI(`${baseUrl}${key}`),
+      };
+
+      if (content) {
+        writeToEditor({content, image});
+      }
+      images.push(image);
+      onSuccess({key}, file);
+      setTimeout(() => {
+        hideUploadNoti();
+      }, 500);
+    } catch (error) {
+      message.destroy();
+      uploadError(error.toString());
+      onError(error, error.toString());
+    }
+    return;
+  }
   const base64Reader = new FileReader();
   base64Reader.readAsDataURL(file);
   base64Reader.onload = (e) => {
@@ -373,27 +489,55 @@ export const r2Upload = async ({
     }
 
     const endpoint = `https://${config.accountId}.r2.cloudflarestorage.com`;
-    const client = new S3Client({
-      region: "auto",
-      endpoint,
-      forcePathStyle: true,
-      credentials: {
-        accessKeyId: config.accessKeyId,
-        secretAccessKey: config.secretAccessKey,
-      },
-    });
-
     const key = getOSSName(uploadFile.name || file.name || "image", config.namespace || "");
-    const fileBuffer = await uploadFile.arrayBuffer();
-    const body = new Uint8Array(fileBuffer);
-    await client.send(
-      new PutObjectCommand({
-        Bucket: config.bucket,
-        Key: key,
-        Body: body,
-        ContentType: uploadFile.type || file.type || "application/octet-stream",
-      }),
-    );
+    const contentType = uploadFile.type || file.type || "application/octet-stream";
+    if (isTauriEnv()) {
+      const filePath = uploadFile.path || file.path || "";
+      let bodyBase64 = null;
+      if (!filePath) {
+        bodyBase64 = await fileToBase64(uploadFile);
+        if (!bodyBase64) {
+          throw new Error("读取文件失败");
+        }
+      }
+      console.log("R2 upload via Tauri:", {key, contentType, filePath, bodyBase64});
+      await withTimeout(
+        invoke("r2_upload", {
+          payload: {
+            accountId: config.accountId,
+            accessKeyId: config.accessKeyId,
+            secretAccessKey: config.secretAccessKey,
+            bucket: config.bucket,
+            key,
+            contentType,
+            filePath,
+            bodyBase64,
+          },
+        }),
+        30000,
+        "上传超时，请检查网络或图床配置",
+      );
+    } else {
+      const fileBuffer = await uploadFile.arrayBuffer();
+      const client = new S3Client({
+        region: "auto",
+        endpoint,
+        forcePathStyle: true,
+        credentials: {
+          accessKeyId: config.accessKeyId,
+          secretAccessKey: config.secretAccessKey,
+        },
+      });
+      const body = new Uint8Array(fileBuffer);
+      await client.send(
+        new PutObjectCommand({
+          Bucket: config.bucket,
+          Key: key,
+          Body: body,
+          ContentType: contentType,
+        }),
+      );
+    }
 
     let baseUrl = config.publicBaseUrl || "";
     if (baseUrl && baseUrl[baseUrl.length - 1] !== "/") {

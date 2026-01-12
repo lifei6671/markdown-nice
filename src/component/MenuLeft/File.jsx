@@ -18,10 +18,11 @@ const menu = (
       <NewFile />
     </Menu.Item>
     <Menu.Item>
-      <DocumentList />
-    </Menu.Item>
-    <Menu.Item>
       <RenameFile />
+    </Menu.Item>
+    <Menu.Divider />
+    <Menu.Item>
+      <DocumentList />
     </Menu.Item>
     <Menu.Item>
       <CategoryManage />

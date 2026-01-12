@@ -105,6 +105,7 @@ class QiniuOSS extends Component {
           <a rel="noopener noreferrer" target="_blank" href="https://docs.mdnice.com/#/qiniu-image-hosting">
             七牛云图床配置文档
           </a>
+          <p style={{color: "red"}}>秘钥会保存到本地浏览器，可能导致你的秘钥泄漏！</p>
         </Form.Item>
       </Form>
     );

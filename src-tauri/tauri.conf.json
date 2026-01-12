@@ -7,7 +7,7 @@
   },
   "package": {
     "productName": "Markdown Nice",
-    "version": "1.6.12"
+    "version": "1.7.3"
   },
   "tauri": {
     "allowlist": {
@@ -27,8 +27,8 @@
       "targets": "all",
       "identifier": "me.disign.mdnice",
       "icon": [
-        "icons/32x32.jpg",
-        "icons/128x128.jpg",
+        "icons/32x32.png",
+        "icons/128x128.png",
         "icons/icon.ico"
       ]
     },

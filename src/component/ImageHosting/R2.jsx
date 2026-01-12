@@ -95,6 +95,7 @@ class R2 extends Component {
               Cloudfare R2 配置文档
             </a>
           </span>
+          <p style={{color: "red"}}>秘钥会保存到本地浏览器，可能导致你的秘钥泄漏！</p>
         </Form.Item>
       </Form>
     );
