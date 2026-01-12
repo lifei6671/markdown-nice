@@ -139,12 +139,12 @@ class R2 extends Component {
         <Form.Item
           label="文件名"
           style={style.formItem}
-          extra="示例：image_${YYYY}${MM}${DD}{hh}{mm}{ss}_${Timestamp}_${RAND:6}.${EXT}（留空则不修改文件名）"
+          extra="示例：image_${YYYY}${MM}${DD}${hh}${mm}${ss}_${Timestamp}_${RAND:6}.${EXT}（留空则不修改文件名）"
         >
           <Input
             value={filenameTemplate}
             onChange={this.filenameTemplateChange}
-            placeholder="image_${YYYY}${MM}${DD}_${Timestamp}_${RAND:6}.${EXT}"
+            placeholder="image_${YYYY}${MM}${DD}${hh}${mm}${ss}_${Timestamp}_${RAND:6}.${EXT}"
           />
         </Form.Item>
         <Form.Item label="尺寸" style={style.formItem}>
