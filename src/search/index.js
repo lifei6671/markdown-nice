@@ -254,6 +254,7 @@ export async function initSearch(rawDocs, opts = {}) {
 export function search(idx, q) {
   const terms = tokenizeForSearch(q);
   if (terms.length === 0) return [];
+  console.log("Searching articles with query:", terms);
   const uniqueTerms = Array.from(new Set(terms));
   return idx.query((query) => {
     uniqueTerms.forEach((term) => {

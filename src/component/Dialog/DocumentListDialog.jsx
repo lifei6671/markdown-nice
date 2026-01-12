@@ -333,7 +333,6 @@ class DocumentListDialog extends Component {
     if (!query) {
       return filtered;
     }
-    console.log("Searching articles with query:", query);
     const itemsById = new Map();
     filtered.forEach((item) => {
       itemsById.set(String(item.document_id), item);
