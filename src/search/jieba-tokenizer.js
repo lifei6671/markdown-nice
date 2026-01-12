@@ -1,6 +1,8 @@
 import lunr from "lunr";
 // eslint-disable-next-line import/no-unresolved
 import initJieba, {cut_for_search} from "jieba-wasm/web";
+// eslint-disable-next-line import/no-unresolved
+import wasmUrl from "../assets/wasm/jieba_rs_wasm_bg.wasm?url";
 
 let jiebaReady = false;
 let jiebaInitPromise = null;
@@ -13,7 +15,7 @@ export async function ensureJiebaReady() {
   if (jiebaReady) return;
   if (!jiebaInitPromise) {
     jiebaInitPromise = (async () => {
-      await initJieba("/wasm/jieba_rs_wasm_bg.wasm");
+      await initJieba(wasmUrl);
       jiebaReady = true;
     })().catch((err) => {
       jiebaInitPromise = null;
