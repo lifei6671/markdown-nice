@@ -17,6 +17,7 @@ export async function ensureJiebaReady() {
     jiebaInitPromise = (async () => {
       await initJieba(wasmUrl);
       jiebaReady = true;
+      console.log("jieba-wasm 初始化成功 -> ", wasmUrl);
     })().catch((err) => {
       jiebaInitPromise = null;
       throw err;

@@ -5,6 +5,10 @@ import ReactDOM from "react-dom";
 import Lib from "./Lib";
 import * as serviceWorker from "./serviceWorker";
 
+// eslint-disable-next-line import/no-unresolved
+import wasmUrl from "./assets/wasm/jieba_rs_wasm_bg.wasm?url";
+import prewarmWasm from "./search/wasm-prewarm";
+
 ReactDOM.render(
   <Lib
     useImageHosting={{
@@ -19,6 +23,8 @@ ReactDOM.render(
   />,
   document.getElementById("root"),
 );
+
+prewarmWasm(wasmUrl);
 
 // If you want your app to work offline and load faster, you can change
 // unregister() to register() below. Note this comes with some pitfalls.
