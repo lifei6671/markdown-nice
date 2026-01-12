@@ -5,6 +5,7 @@ import LocalHistory from "../LocalHistory";
 import {AutoSaveInterval, getLocalDocuments, setLocalDocuments, setLocalDraft} from "../LocalHistory/util";
 import IndexDB from "../LocalHistory/indexdb";
 import debouce from "lodash.debounce";
+import {markIndexDirty, scheduleIndexRebuild} from "../../search";
 import {countVisibleChars} from "../../utils/helper";
 import {DEFAULT_CATEGORY_ID, DEFAULT_CATEGORY_NAME} from "../../utils/constant";
 
@@ -139,6 +140,12 @@ class HistoryDialog extends Component {
       transaction.oncomplete = () => resolve();
       transaction.onerror = (event) => reject(event);
     });
+    try {
+      await markIndexDirty();
+      scheduleIndexRebuild();
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   async initArticleDB() {

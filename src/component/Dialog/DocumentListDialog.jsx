@@ -1,9 +1,12 @@
 import React, {Component} from "react";
 import {observer, inject} from "mobx-react";
-import {Modal, Table, Button, Empty, message} from "antd";
+import {Modal, Table, Button, Empty, message, Select, Input} from "antd";
 import IndexDB from "../LocalHistory/indexdb";
+import {ensureIndexReady, markIndexDirty, scheduleIndexRebuild, search as searchIndex} from "../../search";
 import {countVisibleChars} from "../../utils/helper";
 import {DEFAULT_CATEGORY_ID, DEFAULT_CATEGORY_NAME} from "../../utils/constant";
+
+const ALL_CATEGORY_ID = "all";
 
 @inject("dialog")
 @inject("content")
@@ -26,6 +29,10 @@ class DocumentListDialog extends Component {
       loading: false,
       loadingMore: false,
       hasMore: false,
+      categories: [],
+      selectedCategoryId: ALL_CATEGORY_ID,
+      searchText: "",
+      searchQuery: "",
     };
   }
 
@@ -33,6 +40,7 @@ class DocumentListDialog extends Component {
     this.initIndexDB();
     this.wasOpen = this.props.dialog.isDocumentListOpen;
     if (this.wasOpen) {
+      this.loadCategories();
       this.loadArticles();
     }
   }
@@ -40,7 +48,10 @@ class DocumentListDialog extends Component {
   componentDidUpdate() {
     const isOpen = this.props.dialog.isDocumentListOpen;
     if (isOpen && !this.wasOpen) {
-      this.loadArticles();
+      this.setState({selectedCategoryId: ALL_CATEGORY_ID, searchText: "", searchQuery: ""}, () => {
+        this.loadCategories();
+        this.loadArticles();
+      });
     }
     this.wasOpen = isOpen;
   }
@@ -103,6 +114,113 @@ class DocumentListDialog extends Component {
     }
   };
 
+  ensureDefaultCategory = async () => {
+    if (!this.db || !this.db.objectStoreNames.contains("categories")) {
+      return null;
+    }
+    return new Promise((resolve, reject) => {
+      const transaction = this.db.transaction(["categories"], "readwrite");
+      const store = transaction.objectStore("categories");
+      const request = store.get(DEFAULT_CATEGORY_ID);
+      request.onsuccess = () => {
+        if (request.result) {
+          resolve(request.result);
+          return;
+        }
+        const now = new Date();
+        const payload = {
+          id: DEFAULT_CATEGORY_ID,
+          name: DEFAULT_CATEGORY_NAME,
+          createdAt: now,
+          updatedAt: now,
+        };
+        const addReq = store.add(payload);
+        addReq.onsuccess = () => resolve(payload);
+        addReq.onerror = () => resolve(payload);
+      };
+      request.onerror = (event) => reject(event);
+    });
+  };
+
+  fetchCategories = () => {
+    if (!this.db || !this.db.objectStoreNames.contains("categories")) {
+      return Promise.resolve([]);
+    }
+    return new Promise((resolve, reject) => {
+      const transaction = this.db.transaction(["categories"], "readonly");
+      const store = transaction.objectStore("categories");
+      const items = [];
+      const request = store.openCursor();
+      request.onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (cursor) {
+          items.push(cursor.value);
+          cursor.continue();
+        } else {
+          resolve(items);
+        }
+      };
+      request.onerror = (event) => reject(event);
+    });
+  };
+
+  loadCategories = async () => {
+    try {
+      if (!this.db) {
+        await this.initIndexDB();
+      }
+      if (!this.db) {
+        return [];
+      }
+      await this.ensureDefaultCategory();
+      const categories = await this.fetchCategories();
+      const sorted = categories.sort((a, b) => {
+        if (a.id === DEFAULT_CATEGORY_ID) {
+          return -1;
+        }
+        if (b.id === DEFAULT_CATEGORY_ID) {
+          return 1;
+        }
+        return this.getTimeValue(a.createdAt) - this.getTimeValue(b.createdAt);
+      });
+      this.setState({categories: sorted});
+      return sorted;
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  };
+
+  buildCategoryLookup = (categories) => {
+    const byId = new Map();
+    const byName = new Map();
+    categories.forEach((category) => {
+      byId.set(category.id, category);
+      if (category.name) {
+        byName.set(category.name, category.id);
+      }
+    });
+    return {byId, byName};
+  };
+
+  normalizeCategoryId = (value, categories) => {
+    const {byId, byName} = this.buildCategoryLookup(categories);
+    if (typeof value === "number") {
+      return byId.has(value) ? value : DEFAULT_CATEGORY_ID;
+    }
+    if (typeof value === "string" && value.trim()) {
+      const trimmed = value.trim();
+      if (byName.has(trimmed)) {
+        return byName.get(trimmed);
+      }
+      const parsed = Number(trimmed);
+      if (!Number.isNaN(parsed) && byId.has(parsed)) {
+        return parsed;
+      }
+    }
+    return DEFAULT_CATEGORY_ID;
+  };
+
   getTimeValue = (value) => {
     if (value instanceof Date) {
       return value.getTime();
@@ -158,10 +276,24 @@ class DocumentListDialog extends Component {
       } else {
         this.setState({loadingMore: true});
       }
-      let {items, hasMore} = await this.loadArticleMetaPage(offset, this.pageSize);
-      if (items.length === 0 && offset === 0 && this.db.objectStoreNames.contains("articles")) {
-        await this.migrateLegacyArticles();
-        ({items, hasMore} = await this.loadArticleMetaPage(offset, this.pageSize));
+      const useFilters =
+        this.state.selectedCategoryId !== ALL_CATEGORY_ID || String(this.state.searchQuery || "").trim() !== "";
+      let items = [];
+      let hasMore = false;
+      if (useFilters) {
+        const filtered = await this.loadFilteredArticles();
+        items = filtered.slice(offset, offset + this.pageSize);
+        hasMore = filtered.length > offset + this.pageSize;
+      } else {
+        const pageResult = await this.loadArticleMetaPage(offset, this.pageSize);
+        items = pageResult.items;
+        hasMore = pageResult.hasMore;
+        if (items.length === 0 && offset === 0 && this.db.objectStoreNames.contains("articles")) {
+          await this.migrateLegacyArticles();
+          const retry = await this.loadArticleMetaPage(offset, this.pageSize);
+          items = retry.items;
+          hasMore = retry.hasMore;
+        }
       }
       if (items.some((item) => item && item.charCount == null)) {
         items = await Promise.all(items.map((item) => this.ensureCharCount(item)));
@@ -177,6 +309,85 @@ class DocumentListDialog extends Component {
       this.isFetching = false;
       this.setState({loading: false, loadingMore: false});
     }
+  };
+
+  loadFilteredArticles = async () => {
+    if (!this.db) {
+      return [];
+    }
+    const categories = await this.loadCategories();
+    let items = await this.loadAllArticleMeta();
+    if (items.length === 0 && this.db.objectStoreNames.contains("articles")) {
+      await this.migrateLegacyArticles();
+      items = await this.loadAllArticleMeta();
+    }
+    const normalizedItems = items.map((item) => ({
+      ...item,
+      category: this.normalizeCategoryId(item.category, categories),
+    }));
+    let filtered = normalizedItems;
+    if (this.state.selectedCategoryId !== ALL_CATEGORY_ID) {
+      filtered = filtered.filter((item) => item.category === this.state.selectedCategoryId);
+    }
+    const query = String(this.state.searchQuery || "").trim();
+    if (!query) {
+      return filtered;
+    }
+    console.log("Searching articles with query:", query);
+    const itemsById = new Map();
+    filtered.forEach((item) => {
+      itemsById.set(String(item.document_id), item);
+    });
+    let idx = null;
+    try {
+      idx = await ensureIndexReady();
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+    if (!idx) return [];
+    const results = searchIndex(idx, query);
+    console.log("idx terms count:", Object.keys(idx.invertedIndex).length);
+    console.log("Search results:", results);
+    return results.map((result) => itemsById.get(result.ref)).filter(Boolean);
+  };
+
+  loadAllArticleMeta = () => {
+    if (!this.db) {
+      return Promise.resolve([]);
+    }
+    return new Promise((resolve, reject) => {
+      const transaction = this.db.transaction(["article_meta"], "readonly");
+      const store = transaction.objectStore("article_meta");
+      let request = null;
+      let useIndex = false;
+      try {
+        if (store.indexNames && store.indexNames.contains("createdAt")) {
+          const index = store.index("createdAt");
+          request = index.openCursor(null, "prev");
+          useIndex = true;
+        }
+      } catch (e) {
+        useIndex = false;
+      }
+      if (!request) {
+        request = store.openCursor();
+      }
+      const items = [];
+      request.onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (cursor) {
+          items.push(cursor.value);
+          cursor.continue();
+        } else {
+          if (!useIndex) {
+            items.sort((a, b) => this.getTimeValue(b.createdAt) - this.getTimeValue(a.createdAt));
+          }
+          resolve(items);
+        }
+      };
+      request.onerror = (event) => reject(event);
+    });
   };
 
   loadArticleMetaPage = (offset, limit) => {
@@ -262,6 +473,27 @@ class DocumentListDialog extends Component {
     this.loadMoreArticles();
   };
 
+  handleCategoryChange = (value) => {
+    const nextState = {selectedCategoryId: value};
+    if (!String(this.state.searchText || "").trim()) {
+      nextState.searchQuery = "";
+    }
+    this.setState(nextState, () => this.fetchArticles(true));
+  };
+
+  handleSearchInput = (event) => {
+    this.setState({searchText: event.target.value});
+  };
+
+  handleSearch = () => {
+    this.setState(
+      (prevState) => ({
+        searchQuery: String(prevState.searchText || "").trim(),
+      }),
+      () => this.fetchArticles(true),
+    );
+  };
+
   migrateLegacyArticles = async () => {
     if (!this.db || !this.db.objectStoreNames.contains("articles")) {
       return [];
@@ -275,6 +507,9 @@ class DocumentListDialog extends Component {
       const result = [];
       transaction.oncomplete = () => {
         result.sort((a, b) => this.getTimeValue(b.createdAt) - this.getTimeValue(a.createdAt));
+        markIndexDirty()
+          .then(scheduleIndexRebuild)
+          .catch(console.error);
         resolve(result);
       };
       transaction.onerror = (event) => reject(event);
@@ -477,6 +712,9 @@ class DocumentListDialog extends Component {
               articles: prevState.articles.filter((item) => item.document_id !== article.document_id),
             }));
             message.success("删除成功");
+            markIndexDirty()
+              .then(scheduleIndexRebuild)
+              .catch(console.error);
             resolve();
           };
           transaction.onerror = (event) => {
@@ -539,6 +777,7 @@ class DocumentListDialog extends Component {
     } else if (this.state.hasMore) {
       loadMoreText = "加载更多";
     }
+    const categoryOptions = [{id: ALL_CATEGORY_ID, name: "全部"}, ...this.state.categories];
 
     return (
       <Modal
@@ -548,6 +787,27 @@ class DocumentListDialog extends Component {
         footer={null}
         width={1080}
       >
+        <div style={{display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12}}>
+          <Select style={{width: 200}} value={this.state.selectedCategoryId} onChange={this.handleCategoryChange}>
+            {categoryOptions.map((category) => (
+              <Select.Option key={category.id} value={category.id}>
+                {category.name || DEFAULT_CATEGORY_NAME}
+              </Select.Option>
+            ))}
+          </Select>
+          <div style={{display: "flex", alignItems: "center", gap: 8}}>
+            <Input
+              placeholder="请输入标题"
+              value={this.state.searchText}
+              onChange={this.handleSearchInput}
+              onPressEnter={this.handleSearch}
+              style={{width: 240}}
+            />
+            <Button icon="search" onClick={this.handleSearch}>
+              搜索
+            </Button>
+          </div>
+        </div>
         <div ref={this.tableWrapRef} style={{maxHeight: "60vh", overflowY: "auto"}}>
           <Table
             rowKey="document_id"

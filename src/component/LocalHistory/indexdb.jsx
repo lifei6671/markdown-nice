@@ -41,7 +41,7 @@ export default class IndexDB {
 
       request.onsuccess = (event) => {
         const db = event.target.result;
-        console.log("成功初始化数据库");
+        console.log("成功初始化数据库 ->", db.name);
         // this.db = db;
         resolve(db);
       };

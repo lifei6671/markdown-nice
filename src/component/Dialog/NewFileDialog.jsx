@@ -2,6 +2,7 @@ import React, {Component} from "react";
 import {observer, inject} from "mobx-react";
 import {Modal, Input, Form, Select, message} from "antd";
 import IndexDB from "../LocalHistory/indexdb";
+import {markIndexDirty, scheduleIndexRebuild} from "../../search";
 import {DEFAULT_CATEGORY_ID, DEFAULT_CATEGORY_NAME} from "../../utils/constant";
 
 @inject("dialog")
@@ -273,6 +274,12 @@ class NewFileDialog extends Component {
       this.setState({name: "", categoryId: DEFAULT_CATEGORY_ID});
       this.props.dialog.setNewFileOpen(false);
       message.success("新建文件成功！");
+      try {
+        await markIndexDirty();
+        scheduleIndexRebuild();
+      } catch (e) {
+        console.error(e);
+      }
     } catch (e) {
       console.error(e);
       message.error("新建文件失败");

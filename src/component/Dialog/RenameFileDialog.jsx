@@ -2,6 +2,7 @@ import React, {Component} from "react";
 import {observer, inject} from "mobx-react";
 import {Modal, Input, Form, Select, message} from "antd";
 import IndexDB from "../LocalHistory/indexdb";
+import {markIndexDirty, scheduleIndexRebuild} from "../../search";
 import {DEFAULT_CATEGORY_ID, DEFAULT_CATEGORY_NAME} from "../../utils/constant";
 
 @inject("dialog")
@@ -306,6 +307,12 @@ class RenameFileDialog extends Component {
       transaction.oncomplete = () => resolve();
       transaction.onerror = (event) => reject(event);
     });
+    try {
+      await markIndexDirty();
+      scheduleIndexRebuild();
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   handleOk = async () => {
