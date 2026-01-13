@@ -12,7 +12,7 @@ import prewarmWasm from "./search/wasm-prewarm";
 ReactDOM.render(
   <Lib
     useImageHosting={{
-      url: "https://imgkr.com/api/files/upload",
+      url: "https://api.imgur.com/3/upload",
       name: "图壳",
       isSmmsOpen: true,
       isR2Open: true,

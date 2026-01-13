@@ -8,7 +8,7 @@ const defaultTitle = "Markdown Nice";
 
 // 自定义图床参数
 const useImageHosting = {
-  url: "https://imgkr.com/api/files/upload",
+  url: "https://api.imgur.com/3/upload",
   name: "图壳"
 };
 
