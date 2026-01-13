@@ -1,5 +1,5 @@
-import fs from "node:fs";
-import path from "node:path";
+const fs = require("node:fs");
+const path = require("node:path");
 
 const src = path.resolve("node_modules/jieba-wasm/pkg/web/jieba_rs_wasm_bg.wasm");
 const dstDir = path.resolve("src/assets/wasm");

@@ -1,6 +1,6 @@
 import "./global-shim";
 import React from "react";
-import ReactDOM from "react-dom";
+import {createRoot} from "react-dom/client";
 
 import Lib from "./Lib";
 import * as serviceWorker from "./serviceWorker";
@@ -9,7 +9,8 @@ import * as serviceWorker from "./serviceWorker";
 import wasmUrl from "./assets/wasm/jieba_rs_wasm_bg.wasm?url";
 import prewarmWasm from "./search/wasm-prewarm";
 
-ReactDOM.render(
+const root = createRoot(document.getElementById("root"));
+root.render(
   <Lib
     useImageHosting={{
       url: "https://api.imgur.com/3/upload",
@@ -21,7 +22,6 @@ ReactDOM.render(
     }}
     defaultTitle="Markdown Nice"
   />,
-  document.getElementById("root"),
 );
 
 prewarmWasm(wasmUrl);
